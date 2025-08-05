@@ -2,9 +2,9 @@
 
 """Test context."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 from pickle import dump, load
 
@@ -16,13 +16,14 @@ from phylib.io.array import write_array, read_array
 from ..context import Context, _fullname
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Fixtures
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-@fixture(scope='function')
+
+@fixture(scope="function")
 def context(tempdir):
-    ctx = Context('{}/cache/'.format(tempdir), verbose=1)
+    ctx = Context("{}/cache/".format(tempdir), verbose=1)
     return ctx
 
 
@@ -30,45 +31,46 @@ def context(tempdir):
 def temp_phy_config_dir(tempdir):
     """Use a temporary phy user directory."""
     import phy.utils.context
+
     f = phy.utils.context.phy_config_dir
     phy.utils.context.phy_config_dir = lambda: tempdir
     yield
     phy.utils.context.phy_config_dir = f
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test utils and cache
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_read_write(tempdir):
     x = np.arange(10)
-    write_array(tempdir / 'test.npy', x)
-    ae(read_array(tempdir / 'test.npy'), x)
+    write_array(tempdir / "test.npy", x)
+    ae(read_array(tempdir / "test.npy"), x)
 
 
 def test_context_load_save(tempdir, context, temp_phy_config_dir):
-    assert not context.load('unexisting')
+    assert not context.load("unexisting")
 
-    context.save('a/hello', {'text': 'world'})
-    assert context.load('a/hello')['text'] == 'world'
+    context.save("a/hello", {"text": "world"})
+    assert context.load("a/hello")["text"] == "world"
 
-    context.save('a/hello', {'text': 'world!'}, location='global')
-    assert context.load('a/hello', location='global')['text'] == 'world!'
+    context.save("a/hello", {"text": "world!"}, location="global")
+    assert context.load("a/hello", location="global")["text"] == "world!"
 
 
 def test_context_load_save_pickle(tempdir, context, temp_phy_config_dir):
     arr = np.random.rand(10, 10)
-    context.save('arr', arr, kind='pickle')
-    ae(context.load('arr'), arr)
+    context.save("arr", arr, kind="pickle")
+    ae(context.load("arr"), arr)
 
 
 def test_context_cache(context):
-
     _res = []
 
     def f(x):
         _res.append(x)
-        return x ** 2
+        return x**2
 
     x = np.arange(5)
     x2 = x * x
@@ -109,7 +111,7 @@ def test_context_cache_method(tempdir, context):
     assert a._l == [3]
 
     # Recreate the context.
-    context = Context('{}/cache/'.format(tempdir), verbose=1)
+    context = Context("{}/cache/".format(tempdir), verbose=1)
     # Recreate the class.
     a = A(context)
     assert a.f(3) == 3
@@ -118,21 +120,20 @@ def test_context_cache_method(tempdir, context):
 
 
 def test_context_memcache(tempdir, context):
-
     _res = []
 
     @context.memcache
     def f(x):
         _res.append(x)
-        return x ** 2
+        return x**2
 
     # Compute the function a first time.
     x = 10
-    ae(f(x), x ** 2)
+    ae(f(x), x**2)
     assert len(_res) == 1
 
     # The second time, the memory cache is used.
-    ae(f(x), x ** 2)
+    ae(f(x), x**2)
     assert len(_res) == 1
 
     # We artificially clear the memory cache.
@@ -141,15 +142,15 @@ def test_context_memcache(tempdir, context):
     context.load_memcache(_fullname(f))
 
     # This time, the result is loaded from disk.
-    ae(f(x), x ** 2)
+    ae(f(x), x**2)
     assert len(_res) == 1
 
 
 def test_pickle_cache(tempdir, context):
     """Make sure the Context is picklable."""
-    with open(tempdir / 'test.pkl', 'wb') as f:
+    with open(tempdir / "test.pkl", "wb") as f:
         dump(context, f)
-    with open(tempdir / 'test.pkl', 'rb') as f:
+    with open(tempdir / "test.pkl", "rb") as f:
         ctx = load(f)
     assert isinstance(ctx, Context)
     assert ctx.cache_dir == context.cache_dir

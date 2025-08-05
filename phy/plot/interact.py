@@ -3,9 +3,9 @@
 """Common layouts."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 import numpy as np
@@ -21,9 +21,10 @@ from .visuals import LineVisual, PolygonVisual
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Grid
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class Grid(BaseLayout):
     """Layout showing subplots arranged in a 2D grid.
@@ -48,12 +49,14 @@ class Grid(BaseLayout):
 
     """
 
-    margin = .075
+    margin = 0.075
     n_dims = 2
     active_box = (0, 0)
-    _scaling = (1., 1.)
+    _scaling = (1.0, 1.0)
 
-    def __init__(self, shape=(1, 1), shape_var='u_grid_shape', box_var=None, has_clip=True):
+    def __init__(
+        self, shape=(1, 1), shape_var="u_grid_shape", box_var=None, has_clip=True
+    ):
         super(Grid, self).__init__(box_var=box_var)
         self.shape_var = shape_var
         self._shape = shape
@@ -62,17 +65,22 @@ class Grid(BaseLayout):
 
         # Define the GPU transforms of the Grid layout.
         # 1. Global scaling.
-        self.gpu_transforms.add(Scale(self._scaling, gpu_var='u_grid_scaling'))
+        self.gpu_transforms.add(Scale(self._scaling, gpu_var="u_grid_scaling"))
         # 2. Margin.
         self.gpu_transforms.add(Scale((ms, ms)))
         # 3. Clipping for the subplots.
         if has_clip:
             self.gpu_transforms.add(Clip([-mc, -mc, +mc, +mc]))
         # 4. Subplots.
-        self.gpu_transforms.add(Subplot(
-            # The parameters of the subplots are callable as they can be changed dynamically.
-            shape=lambda: self._shape, index=lambda: self.active_box,
-            shape_gpu_var=self.shape_var, index_gpu_var=self.box_var))
+        self.gpu_transforms.add(
+            Subplot(
+                # The parameters of the subplots are callable as they can be changed dynamically.
+                shape=lambda: self._shape,
+                index=lambda: self.active_box,
+                shape_gpu_var=self.shape_var,
+                index_gpu_var=self.box_var,
+            )
+        )
 
     def attach(self, canvas):
         """Attach the grid to a canvas."""
@@ -84,7 +92,9 @@ class Grid(BaseLayout):
             uniform vec2 {};
             uniform vec2 u_grid_scaling;
             """.format(self.box_var, self.shape_var),
-            'header', origin=self)
+            "header",
+            origin=self,
+        )
 
     def add_boxes(self, canvas, shape=None):
         """Show subplot boxes."""
@@ -92,13 +102,16 @@ class Grid(BaseLayout):
         assert isinstance(shape, tuple)
         n, m = shape
         n_boxes = n * m
-        a = 1 - .0001
+        a = 1 - 0.0001
 
-        pos = np.array([[-a, -a, +a, -a],
-                        [+a, -a, +a, +a],
-                        [+a, +a, -a, +a],
-                        [-a, +a, -a, -a],
-                        ])
+        pos = np.array(
+            [
+                [-a, -a, +a, -a],
+                [+a, -a, +a, +a],
+                [+a, +a, -a, +a],
+                [-a, +a, -a, -a],
+            ]
+        )
         pos = np.tile(pos, (n_boxes, 1))
 
         box_index = []
@@ -120,8 +133,8 @@ class Grid(BaseLayout):
         """Get the box index (i, j) closest to a given position in NDC coordinates."""
         x, y = pos
         rows, cols = self.shape
-        j = np.clip(int(cols * (1. + x) / 2.), 0, cols - 1)
-        i = np.clip(int(rows * (1. - y) / 2.), 0, rows - 1)
+        j = np.clip(int(cols * (1.0 + x) / 2.0), 0, cols - 1)
+        i = np.clip(int(rows * (1.0 - y) / 2.0), 0, rows - 1)
         return i, j
 
     def update_visual(self, visual):
@@ -129,7 +142,7 @@ class Grid(BaseLayout):
         super(Grid, self).update_visual(visual)
         if self.shape_var in visual.program:
             visual.program[self.shape_var] = self._shape
-            visual.program['u_grid_scaling'] = self._scaling
+            visual.program["u_grid_scaling"] = self._scaling
 
     @property
     def shape(self):
@@ -152,9 +165,10 @@ class Grid(BaseLayout):
         self.update()
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Boxed
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class Boxed(BaseLayout):
     """Layout showing plots in rectangles at arbitrary positions. Used by the waveform view.
@@ -180,11 +194,11 @@ class Boxed(BaseLayout):
 
     """
 
-    margin = .1
+    margin = 0.1
     n_dims = 1
     active_box = 0
-    _box_scaling = (1., 1.)
-    _layout_scaling = (1., 1.)
+    _box_scaling = (1.0, 1.0)
+    _layout_scaling = (1.0, 1.0)
     _scaling_param_increment = 1.1
 
     def __init__(self, box_pos=None, box_var=None, keep_aspect_ratio=False):
@@ -194,41 +208,56 @@ class Boxed(BaseLayout):
 
         self.update_boxes(box_pos)
 
-        self.gpu_transforms.add(Range(
-            NDC, lambda: self.box_bounds[self.active_box],
-            from_gpu_var='vec4(-1, -1, 1, 1)', to_gpu_var='box_bounds'))
+        self.gpu_transforms.add(
+            Range(
+                NDC,
+                lambda: self.box_bounds[self.active_box],
+                from_gpu_var="vec4(-1, -1, 1, 1)",
+                to_gpu_var="box_bounds",
+            )
+        )
 
     def attach(self, canvas):
         """Attach the boxed interact to a canvas."""
         super(Boxed, self).attach(canvas)
         canvas.gpu_transforms += self.gpu_transforms
-        canvas.inserter.insert_vert("""
+        canvas.inserter.insert_vert(
+            """
             #include "utils.glsl"
             attribute float {};
             uniform sampler2D u_box_pos;
             uniform float n_boxes;
             uniform vec2 u_box_size;
             uniform vec2 u_layout_scaling;
-            """.format(self.box_var), 'header', origin=self)
-        canvas.inserter.insert_vert("""
+            """.format(self.box_var),
+            "header",
+            origin=self,
+        )
+        canvas.inserter.insert_vert(
+            """
             // Fetch the box bounds for the current box (`box_var`).
             vec2 box_pos = fetch_texture({}, u_box_pos, n_boxes).xy;
             box_pos = (2 * box_pos - 1);  // from [0, 1] (texture) to [-1, 1] (NDC)
             box_pos = box_pos * u_layout_scaling;
             vec4 box_bounds = vec4(box_pos - u_box_size, box_pos + u_box_size);
-            """.format(self.box_var), 'start', origin=self)
+            """.format(self.box_var),
+            "start",
+            origin=self,
+        )
 
     def update_visual(self, visual):
         """Update a visual."""
         super(Boxed, self).update_visual(visual)
         box_pos = _get_texture(self.box_pos, (0, 0), self.n_boxes, [-1, 1])
         box_pos = box_pos.astype(np.float32)
-        if 'u_box_pos' in visual.program:
+        if "u_box_pos" in visual.program:
             logger.log(5, "Update visual with interact Boxed.")
-            visual.program['u_box_pos'] = box_pos
-            visual.program['n_boxes'] = self.n_boxes
-            visual.program['u_box_size'] = np.array(self.box_size) * np.array(self._box_scaling)
-            visual.program['u_layout_scaling'] = self._layout_scaling
+            visual.program["u_box_pos"] = box_pos
+            visual.program["n_boxes"] = self.n_boxes
+            visual.program["u_box_size"] = np.array(self.box_size) * np.array(
+                self._box_scaling
+            )
+            visual.program["u_layout_scaling"] = self._layout_scaling
 
     def update_boxes(self, box_pos):
         """Update the box positions and automatically-computed size."""
@@ -237,25 +266,28 @@ class Boxed(BaseLayout):
     def add_boxes(self, canvas):
         """Show the boxes borders."""
         n_boxes = len(self.box_pos)
-        a = 1 + .05
+        a = 1 + 0.05
 
-        pos = np.array([[-a, -a, +a, -a],
-                        [+a, -a, +a, +a],
-                        [+a, +a, -a, +a],
-                        [-a, +a, -a, -a],
-                        ])
+        pos = np.array(
+            [
+                [-a, -a, +a, -a],
+                [+a, -a, +a, +a],
+                [+a, +a, -a, +a],
+                [-a, +a, -a, -a],
+            ]
+        )
         pos = np.tile(pos, (n_boxes, 1))
 
         boxes = LineVisual()
         box_index = np.repeat(np.arange(n_boxes), 8)
 
         canvas.add_visual(boxes, clearable=False)
-        boxes.set_data(pos=pos, color=(.5, .5, .5, 1))
+        boxes.set_data(pos=pos, color=(0.5, 0.5, 0.5, 1))
         boxes.set_box_index(box_index)
         canvas.update()
 
     # Change the box bounds, positions, or size
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     @property
     def n_boxes(self):
@@ -273,9 +305,9 @@ class Boxed(BaseLayout):
         return get_closest_box(pos, self.box_pos, self.box_size)
 
     # Box scaling
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
-    def _increment_box_scaling(self, cw=1., ch=1.):
+    def _increment_box_scaling(self, cw=1.0, ch=1.0):
         self._box_scaling = (self._box_scaling[0] * cw, self._box_scaling[1] * ch)
         self.update()
 
@@ -287,19 +319,22 @@ class Boxed(BaseLayout):
         return self._increment_box_scaling(cw=self._scaling_param_increment)
 
     def shrink_box_width(self):
-        return self._increment_box_scaling(cw=1. / self._scaling_param_increment)
+        return self._increment_box_scaling(cw=1.0 / self._scaling_param_increment)
 
     def expand_box_height(self):
         return self._increment_box_scaling(ch=self._scaling_param_increment)
 
     def shrink_box_height(self):
-        return self._increment_box_scaling(ch=1. / self._scaling_param_increment)
+        return self._increment_box_scaling(ch=1.0 / self._scaling_param_increment)
 
     # Layout scaling
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
-    def _increment_layout_scaling(self, cw=1., ch=1.):
-        self._layout_scaling = (self._layout_scaling[0] * cw, self._layout_scaling[1] * ch)
+    def _increment_layout_scaling(self, cw=1.0, ch=1.0):
+        self._layout_scaling = (
+            self._layout_scaling[0] * cw,
+            self._layout_scaling[1] * ch,
+        )
         self.update()
 
     @property
@@ -310,13 +345,13 @@ class Boxed(BaseLayout):
         return self._increment_layout_scaling(cw=self._scaling_param_increment)
 
     def shrink_layout_width(self):
-        return self._increment_layout_scaling(cw=1. / self._scaling_param_increment)
+        return self._increment_layout_scaling(cw=1.0 / self._scaling_param_increment)
 
     def expand_layout_height(self):
         return self._increment_layout_scaling(ch=self._scaling_param_increment)
 
     def shrink_layout_height(self):
-        return self._increment_layout_scaling(ch=1. / self._scaling_param_increment)
+        return self._increment_layout_scaling(ch=1.0 / self._scaling_param_increment)
 
 
 class Stacked(Boxed):
@@ -339,12 +374,13 @@ class Stacked(Boxed):
     variable specified in `box_var`.
 
     """
+
     margin = 0
-    _origin = 'bottom'
+    _origin = "bottom"
 
     def __init__(self, n_boxes, box_var=None, origin=None):
         self._origin = origin or self._origin
-        assert self._origin in ('top', 'bottom')
+        assert self._origin in ("top", "bottom")
         box_pos = self.get_box_pos(n_boxes)
         super(Stacked, self).__init__(box_pos, box_var=box_var, keep_aspect_ratio=False)
 
@@ -363,7 +399,7 @@ class Stacked(Boxed):
         # Signal bounds.
         b = np.zeros((n_boxes, 2))
         b[:, 1] = np.linspace(-1, 1, n_boxes)
-        if self._origin == 'top':
+        if self._origin == "top":
             b = b[::-1, :]
         return b
 
@@ -383,14 +419,19 @@ class Stacked(Boxed):
         """Attach the stacked interact to a canvas."""
         BaseLayout.attach(self, canvas)
         canvas.gpu_transforms += self.gpu_transforms
-        canvas.inserter.insert_vert("""
+        canvas.inserter.insert_vert(
+            """
             #include "utils.glsl"
             attribute float {};
             uniform float n_boxes;
             uniform bool u_top_origin;
             uniform vec2 u_box_size;
-            """.format(self.box_var), 'header', origin=self)
-        canvas.inserter.insert_vert("""
+            """.format(self.box_var),
+            "header",
+            origin=self,
+        )
+        canvas.inserter.insert_vert(
+            """
             float margin = .1 / n_boxes;
             float a = 1 - 2. / n_boxes + margin;
             float b = -1 + 2. / n_boxes - margin;
@@ -402,24 +443,29 @@ class Stacked(Boxed):
             y0 = ym - yh;
             y1 = ym + yh;
             vec4 box_bounds = vec4(-1., y0, +1., y1);
-        """.format(bv=self.box_var), 'before_transforms', origin=self)
+        """.format(bv=self.box_var),
+            "before_transforms",
+            origin=self,
+        )
 
     def update_visual(self, visual):
         """Update a visual."""
         BaseLayout.update_visual(self, visual)
-        if 'n_boxes' in visual.program:
-            visual.program['n_boxes'] = self.n_boxes
-            visual.program['u_box_size'] = self._box_scaling
-            visual.program['u_top_origin'] = self._origin == 'top'
+        if "n_boxes" in visual.program:
+            visual.program["n_boxes"] = self.n_boxes
+            visual.program["u_box_size"] = self._box_scaling
+            visual.program["u_top_origin"] = self._origin == "top"
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Interactive tools
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class Lasso(object):
     """Draw a polygon with the mouse and find the points that belong to the inside of the
     polygon."""
+
     def __init__(self):
         self._points = []
         self.canvas = None
@@ -481,10 +527,10 @@ class Lasso(object):
 
     def on_mouse_click(self, e):
         """Add a polygon point with ctrl+click."""
-        if 'Control' in e.modifiers:
-            if e.button == 'Left':
-                layout = getattr(self.canvas, 'layout', None)
-                if hasattr(layout, 'box_map'):
+        if "Control" in e.modifiers:
+            if e.button == "Left":
+                layout = getattr(self.canvas, "layout", None)
+                if hasattr(layout, "box_map"):
                     box, pos = layout.box_map(e.pos)
                     # Only update the box for the first click, so that the box containing
                     # the lasso is determined by the first click only.

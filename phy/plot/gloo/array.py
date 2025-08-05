@@ -46,17 +46,17 @@ class VertexArray(GPUData, GLObject):
 
     @property
     def need_update(self):
-        """ Whether object needs to be updated """
+        """Whether object needs to be updated"""
 
         return self._buffer.need_update
 
     def _update(self):
-        """ Upload all pending data to GPU. """
+        """Upload all pending data to GPU."""
 
         self._buffer._update()
 
     def _create(self):
-        """ Create vertex array on GPU """
+        """Create vertex array on GPU"""
 
         self._handle = gl.glGenVertexArrays(1)
         log.debug("GPU: Creating vertex array (id=%d)" % self._id)
@@ -64,21 +64,21 @@ class VertexArray(GPUData, GLObject):
         self._buffer._create()
 
     def _delete(self):
-        """ Delete vertex array from GPU """
+        """Delete vertex array from GPU"""
 
         if self._handle > -1:
             self._buffer._delete()
             gl.glDeleteVertexArrays(1, np.array([self._handle]))
 
     def _activate(self):
-        """ Bind the array """
+        """Bind the array"""
 
         log.debug("GPU: Activating array (id=%d)" % self._id)
         gl.glBindVertexArray(self._handle)
         self._buffer._activate()
 
     def _deactivate(self):
-        """ Unbind the current bound array """
+        """Unbind the current bound array"""
 
         self._buffer._deactivate()
         log.debug("GPU: Deactivating array (id=%d)" % self._id)

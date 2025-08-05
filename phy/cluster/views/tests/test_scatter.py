@@ -2,9 +2,9 @@
 
 """Test scatter view."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
 from pytest import raises
@@ -15,14 +15,13 @@ from ..scatter import ScatterView
 from . import _stop_and_close
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test scatter view
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_scatter_view_0(qtbot, gui):
-    v = ScatterView(
-        coords=lambda cluster_ids, load_all=False: None
-    )
+    v = ScatterView(coords=lambda cluster_ids, load_all=False: None)
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
@@ -42,7 +41,8 @@ def test_scatter_view_1(qtbot, gui):
     x = np.zeros(1)
     v = ScatterView(
         coords=lambda cluster_ids: Bunch(
-            x=x, y=x, spike_ids=[0], spike_clusters=[0], data_bounds=(0, 0, 0, 0))
+            x=x, y=x, spike_ids=[0], spike_clusters=[0], data_bounds=(0, 0, 0, 0)
+        )
     )
     v.show()
     qtbot.waitForWindowShown(v.canvas)
@@ -54,12 +54,15 @@ def test_scatter_view_1(qtbot, gui):
 def test_scatter_view_2(qtbot, gui):
     n = 1000
     v = ScatterView(
-        coords=lambda cluster_ids, load_all=False: [Bunch(
-            x=np.random.randn(n),
-            y=np.random.randn(n),
-            spike_ids=np.arange(n),
-            data_bounds=None,
-        ) for c in cluster_ids]
+        coords=lambda cluster_ids, load_all=False: [
+            Bunch(
+                x=np.random.randn(n),
+                y=np.random.randn(n),
+                spike_ids=np.arange(n),
+                data_bounds=None,
+            )
+            for c in cluster_ids
+        ]
     )
     v.show()
     qtbot.waitForWindowShown(v.canvas)
@@ -77,10 +80,10 @@ def test_scatter_view_2(qtbot, gui):
     assert len(spike_ids) == 0
 
     a, b = 50, 1000
-    mouse_click(qtbot, v.canvas, (a, a), modifiers=('Control',))
-    mouse_click(qtbot, v.canvas, (a, b), modifiers=('Control',))
-    mouse_click(qtbot, v.canvas, (b, b), modifiers=('Control',))
-    mouse_click(qtbot, v.canvas, (b, a), modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, (a, a), modifiers=("Control",))
+    mouse_click(qtbot, v.canvas, (a, b), modifiers=("Control",))
+    mouse_click(qtbot, v.canvas, (b, b), modifiers=("Control",))
+    mouse_click(qtbot, v.canvas, (b, a), modifiers=("Control",))
 
     # Split lassoed points.
     spike_ids = v.on_request_split()
@@ -106,10 +109,10 @@ def test_scatter_view_3(qtbot, gui):
     v.on_select(cluster_ids=[0, 2])
 
     a, b = 50, 1000
-    mouse_click(qtbot, v.canvas, (a, a), modifiers=('Control',))
-    mouse_click(qtbot, v.canvas, (a, b), modifiers=('Control',))
-    mouse_click(qtbot, v.canvas, (b, b), modifiers=('Control',))
-    mouse_click(qtbot, v.canvas, (b, a), modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, (a, a), modifiers=("Control",))
+    mouse_click(qtbot, v.canvas, (a, b), modifiers=("Control",))
+    mouse_click(qtbot, v.canvas, (b, b), modifiers=("Control",))
+    mouse_click(qtbot, v.canvas, (b, a), modifiers=("Control",))
 
     # Split lassoed points.
     spike_ids = v.on_request_split()

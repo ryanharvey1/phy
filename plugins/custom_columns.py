@@ -7,4 +7,4 @@ class ExampleCustomColumnsPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
         def on_controller_ready(sender):
-            controller.supervisor.columns = ['id', 'n_spikes']
+            controller.supervisor.columns = ["id", "n_spikes"]

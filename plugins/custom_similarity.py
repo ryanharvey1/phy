@@ -17,8 +17,8 @@ def _dot_product(mw1, c1, mw2, c2):
     assert mw2.ndim == 2  # (n_samples, n_channels_loc_2)
 
     # We normalize the waveforms.
-    mw1 /= np.sqrt(np.sum(mw1 ** 2))
-    mw2 /= np.sqrt(np.sum(mw2 ** 2))
+    mw1 /= np.sqrt(np.sum(mw1**2))
+    mw2 /= np.sqrt(np.sum(mw2**2))
 
     # We find the union of the channel ids for both clusters so that we can convert from sparse
     # to dense format.
@@ -42,7 +42,6 @@ def _dot_product(mw1, c1, mw2, c2):
 
 class ExampleSimilarityPlugin(IPlugin):
     def attach_to_controller(self, controller):
-
         # We cache this function in memory and on disk.
         @controller.context.memcache
         def mean_waveform_similarity(cluster_id):
@@ -64,13 +63,15 @@ class ExampleSimilarityPlugin(IPlugin):
                 assert mw is not None
                 # We compute the dot product between the current cluster and the other cluster.
                 d = _dot_product(mean_waveforms, channel_ids, mw.data, mw.channel_ids)
-                out.append((cl, d))  # convert from distance to similarity with a minus sign
+                out.append(
+                    (cl, d)
+                )  # convert from distance to similarity with a minus sign
 
             # We return the similar clusters by decreasing similarity.
             return sorted(out, key=itemgetter(1), reverse=True)
 
         # We add the similarity function.
-        controller.similarity_functions['mean_waveform'] = mean_waveform_similarity
+        controller.similarity_functions["mean_waveform"] = mean_waveform_similarity
 
         # We set the similarity function to the newly-defined one.
-        controller.similarity = 'mean_waveform'
+        controller.similarity = "mean_waveform"

@@ -2,9 +2,9 @@
 
 """Execution context that handles parallel processing and caching."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 from functools import wraps
 import inspect
@@ -19,9 +19,10 @@ from .config import phy_config_dir, ensure_dir_exists
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Context
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _cache_methods(obj, memcached, cached):  # pragma: no cover
     for name in memcached:
@@ -70,7 +71,7 @@ class Context(object):
     """
 
     """Maximum cache size, in bytes."""
-    cache_limit = 2 * 1024 ** 3  # 2 GB
+    cache_limit = 2 * 1024**3  # 2 GB
 
     def __init__(self, cache_dir, verbose=0):
         self.verbose = verbose
@@ -81,7 +82,7 @@ class Context(object):
             os.makedirs(str(self.cache_dir))
 
         # Ensure the memcache directory exists.
-        path = self.cache_dir / 'memcache'
+        path = self.cache_dir / "memcache"
         if not path.exists():
             path.mkdir()
 
@@ -94,15 +95,20 @@ class Context(object):
         # Try importing joblib.
         try:
             from joblib import Memory
+
             self._memory = Memory(
-                location=self.cache_dir, mmap_mode=None, verbose=self.verbose,
-                bytes_limit=self.cache_limit)
+                location=self.cache_dir,
+                mmap_mode=None,
+                verbose=self.verbose,
+                bytes_limit=self.cache_limit,
+            )
             logger.debug("Initialize joblib cache dir at `%s`.", self.cache_dir)
             logger.debug("Reducing the size of the cache if needed.")
             self._memory.reduce_size()
         except ImportError:  # pragma: no cover
             logger.warning(
-                "Joblib is not installed. Install it with `conda install joblib`.")
+                "Joblib is not installed. Install it with `conda install joblib`."
+            )
             self._memory = None
 
     def cache(self, f):
@@ -112,8 +118,8 @@ class Context(object):
             return f
         assert f
         # NOTE: discard self in instance methods.
-        if 'self' in inspect.getfullargspec(f).args:
-            ignore = ['self']
+        if "self" in inspect.getfullargspec(f).args:
+            ignore = ["self"]
         else:
             ignore = None
         disk_cached = self._memory.cache(f, ignore=ignore)
@@ -121,10 +127,10 @@ class Context(object):
 
     def load_memcache(self, name):
         """Load the memcache from disk (pickle file), if it exists."""
-        path = self.cache_dir / 'memcache' / (name + '.pkl')
+        path = self.cache_dir / "memcache" / (name + ".pkl")
         if path.exists():
             logger.debug("Load memcache for `%s`.", name)
-            with open(str(path), 'rb') as fd:
+            with open(str(path), "rb") as fd:
                 cache = load(fd)
         else:
             cache = {}
@@ -134,9 +140,9 @@ class Context(object):
     def save_memcache(self):
         """Save the memcache to disk using pickle."""
         for name, cache in self._memcache.items():
-            path = self.cache_dir / 'memcache' / (name + '.pkl')
+            path = self.cache_dir / "memcache" / (name + ".pkl")
             logger.debug("Save memcache for `%s`.", name)
-            with open(str(path), 'wb') as fd:
+            with open(str(path), "wb") as fd:
                 dump(cache, fd)
 
     def memcache(self, f):
@@ -154,16 +160,17 @@ class Context(object):
                 out = f(*args, **kwargs)
                 cache[h] = out
             return out
+
         return memcached
 
-    def _get_path(self, name, location, file_ext='.json'):
+    def _get_path(self, name, location, file_ext=".json"):
         """Get the path to the cache file."""
-        if location == 'local':
+        if location == "local":
             return self.cache_dir / (name + file_ext)
-        elif location == 'global':
+        elif location == "global":
             return phy_config_dir() / (name + file_ext)
 
-    def save(self, name, data, location='local', kind='json'):
+    def save(self, name, data, location="local", kind="json"):
         """Save a dictionary in a JSON/pickle file within the cache directory.
 
         Parameters
@@ -179,16 +186,16 @@ class Context(object):
             Can be `json` or `pickle`.
 
         """
-        file_ext = '.json' if kind == 'json' else '.pkl'
+        file_ext = ".json" if kind == "json" else ".pkl"
         path = self._get_path(name, location, file_ext=file_ext)
         ensure_dir_exists(path.parent)
         logger.debug("Save data to `%s`.", path)
-        if kind == 'json':
+        if kind == "json":
             save_json(path, data)
         else:
             save_pickle(path, data)
 
-    def load(self, name, location='local'):
+    def load(self, name, location="local"):
         """Load a dictionary saved in the cache directory.
 
         Parameters
@@ -200,10 +207,10 @@ class Context(object):
             Can be `local` or `global`.
 
         """
-        path = self._get_path(name, location, file_ext='.json')
+        path = self._get_path(name, location, file_ext=".json")
         if path.exists():
             return load_json(path)
-        path = self._get_path(name, location, file_ext='.pkl')
+        path = self._get_path(name, location, file_ext=".pkl")
         if path.exists():
             return load_pickle(path)
         logger.debug("The file `%s` doesn't exist.", path)
@@ -212,11 +219,11 @@ class Context(object):
     def __getstate__(self):
         """Make sure that this class is picklable."""
         state = self.__dict__.copy()
-        state['_memory'] = None
+        state["_memory"] = None
         return state
 
     def __setstate__(self, state):
         """Make sure that this class is picklable."""
         self.__dict__ = state
         # Recreate the joblib Memory instance.
-        self._set_memory(state['cache_dir'])
+        self._set_memory(state["cache_dir"])

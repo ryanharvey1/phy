@@ -2,28 +2,31 @@
 
 """Test gui."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 
 from pytest import raises
 
 from ..qt import Qt, QApplication, QWidget, QMessageBox
-from ..gui import (GUI, Actions,
-                   _try_get_matplotlib_canvas,
-                   _try_get_opengl_canvas,
-                   )
+from ..gui import (
+    GUI,
+    Actions,
+    _try_get_matplotlib_canvas,
+    _try_get_opengl_canvas,
+)
 from phy.plot import BaseCanvas
 from phylib.utils import connect, unconnect, emit
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Utilities and fixtures
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _create_canvas():
     """Create a GL view."""
@@ -31,17 +34,20 @@ def _create_canvas():
     return c
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test views
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_matplotlib_view():
     from matplotlib.pyplot import Figure
+
     assert isinstance(_try_get_matplotlib_canvas(Figure()), QWidget)
     assert isinstance(_try_get_opengl_canvas(Figure()), Figure)
 
     class MyFigure(object):
         figure = Figure()
+
     assert isinstance(_try_get_matplotlib_canvas(MyFigure()), QWidget)
 
     class Canvas(object):
@@ -49,22 +55,26 @@ def test_matplotlib_view():
 
     class MyFigure(object):
         canvas = Canvas()
+
     assert isinstance(_try_get_matplotlib_canvas(MyFigure()), QWidget)
 
 
 def test_opengl_view():
     from phy.plot.base import BaseCanvas
+
     assert isinstance(_try_get_opengl_canvas(BaseCanvas()), QWidget)
     assert isinstance(_try_get_matplotlib_canvas(BaseCanvas()), BaseCanvas)
 
     class MyFigure(object):
         canvas = BaseCanvas()
+
     assert isinstance(_try_get_opengl_canvas(MyFigure()), QWidget)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test GUI
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_gui_noapp(tempdir):
     if not QApplication.instance():
@@ -73,17 +83,17 @@ def test_gui_noapp(tempdir):
 
 
 def test_gui_1(tempdir, qtbot):
-
     gui = GUI(position=(200, 100), size=(100, 100), config_dir=tempdir)
     gui.set_default_actions()
     qtbot.addWidget(gui)
 
-    assert gui.name == 'GUI'
+    assert gui.name == "GUI"
 
     # Increase coverage.
     @connect(sender=gui)
     def on_show():
         pass
+
     unconnect(on_show)
     qtbot.keyPress(gui, Qt.Key_Control)
     qtbot.keyRelease(gui, Qt.Key_Control)
@@ -115,8 +125,8 @@ def test_gui_1(tempdir, qtbot):
 
     gui.close()
 
-    assert gui.state.geometry_state['geometry']
-    assert gui.state.geometry_state['state']
+    assert gui.state.geometry_state["geometry"]
+    assert gui.state.geometry_state["state"]
 
     gui.help_actions.show_all_shortcuts()
     gui.file_actions.save()
@@ -127,7 +137,7 @@ def test_gui_creator(tempdir, qtbot):
     class MyCanvas(BaseCanvas):
         def __init__(self, *args, **kwargs):
             super(MyCanvas, self).__init__(*args, **kwargs)
-            self.actions = Actions(gui, menu='MyCanvas', name='actions')
+            self.actions = Actions(gui, menu="MyCanvas", name="actions")
 
         def attach(self, gui):
             gui.add_view(self)
@@ -139,44 +149,44 @@ def test_gui_creator(tempdir, qtbot):
         return MyCanvas()
 
     # View creator.
-    vc = {'BaseCanvas': _create_canvas, 'MyCanvas': _create_my_canvas}
+    vc = {"BaseCanvas": _create_canvas, "MyCanvas": _create_my_canvas}
 
     gui = GUI(position=(200, 100), size=(100, 100), config_dir=tempdir, view_creator=vc)
     gui.set_default_actions()
     qtbot.addWidget(gui)
 
     # Automatically create the views with the view counts.
-    gui._requested_view_count = {'BaseCanvas': 1, 'MyCanvas': 2, 'UnusedClass': 0}
+    gui._requested_view_count = {"BaseCanvas": 1, "MyCanvas": 2, "UnusedClass": 0}
     gui.create_views()
     gui.show()
     qtbot.waitForWindowShown(gui)
 
-    assert gui.view_count == {'BaseCanvas': 1, 'MyCanvas': 2}
+    assert gui.view_count == {"BaseCanvas": 1, "MyCanvas": 2}
     assert len(gui.list_views(BaseCanvas)) == 1
 
     # Two MyCanvas views.
-    views = gui.list_views('MyCanvas')
+    views = gui.list_views("MyCanvas")
     assert len(views) == 2
 
-    add_action = gui.view_actions.get('Add MyCanvas')
+    add_action = gui.view_actions.get("Add MyCanvas")
 
     # Close the first dock widget.
     views[0].dock.toggleViewAction().activate(0)
-    gui.remove_menu('&File')
+    gui.remove_menu("&File")
 
     # One remaining MyCanvas view.
     views = gui.list_views(MyCanvas)
     assert len(views) == 1
-    assert views[0].name == 'MyCanvas (1)'
-    assert gui.view_count == {'BaseCanvas': 1, 'MyCanvas': 1}
+    assert views[0].name == "MyCanvas (1)"
+    assert gui.view_count == {"BaseCanvas": 1, "MyCanvas": 1}
 
     # Add a new MyCanvas.
     add_action.activate(0)
     views = gui.list_views(MyCanvas)
     assert len(views) == 2
-    assert views[0].name == 'MyCanvas (1)'
-    assert views[1].name == 'MyCanvas (2)'
-    assert gui.view_count == {'BaseCanvas': 1, 'MyCanvas': 2}
+    assert views[0].name == "MyCanvas (1)"
+    assert views[1].name == "MyCanvas (2)"
+    assert gui.view_count == {"BaseCanvas": 1, "MyCanvas": 2}
 
     # qtbot.stop()
     gui.close()
@@ -192,35 +202,36 @@ def test_gui_dock_widget_1(qtbot, gui):
         pass
 
     # Add 2 buttons.
-    v.dock.add_button(name='b1', text='hello world', callback=callback)
+    v.dock.add_button(name="b1", text="hello world", callback=callback)
 
     @v.dock.add_button(
-        name='b2', checkable=True, checked=True, icon='f15c', event='button_clicked')
+        name="b2", checkable=True, checked=True, icon="f15c", event="button_clicked"
+    )
     def callback_1(checked):
         pass
 
     # Add a checkbox.
-    @v.dock.add_checkbox(name='c1', text='checkbox', checked=True)
+    @v.dock.add_checkbox(name="c1", text="checkbox", checked=True)
     def callback_2(checked):
         pass
 
     # Make sure the second button reacts to events.
-    b2 = v.dock.get_widget('b2')
+    b2 = v.dock.get_widget("b2")
     assert b2.isChecked()
-    emit('button_clicked', v, False)
+    emit("button_clicked", v, False)
     assert not b2.isChecked()
 
     # Set and check the title bar status text.
     v.dock.set_status("this is a status")
-    assert v.dock.status == 'this is a status'
+    assert v.dock.status == "this is a status"
 
     # Set and check the title bar status text.
     v.dock.set_status("---very long---" + "------" * 10)
     assert len(v.dock.status) <= v.dock.max_status_length + 5
 
     b2.click()
-    v.dock.get_widget('b1').click()
-    v.dock.get_widget('c1').click()
+    v.dock.get_widget("b1").click()
+    v.dock.get_widget("c1").click()
 
 
 def test_gui_view_action(qtbot, gui):
@@ -235,7 +246,7 @@ def test_gui_view_action(qtbot, gui):
     def my_action_1():
         pass
 
-    @actions.add(view=v, view_submenu='view submenu')
+    @actions.add(view=v, view_submenu="view submenu")
     def my_action_2():
         pass
 
@@ -244,26 +255,27 @@ def test_gui_view_action(qtbot, gui):
 
 
 def test_gui_menu(qtbot, gui):
-    gui.get_menu('&File')
-    gui.get_submenu('&File', 'Submenu')
+    gui.get_menu("&File")
+    gui.get_submenu("&File", "Submenu")
 
-    @gui.file_actions.add(menu='Submenu')
+    @gui.file_actions.add(menu="Submenu")
     def my_action():
         pass
-    gui.get_menu('&Edit', '&File')
+
+    gui.get_menu("&Edit", "&File")
 
 
 def test_gui_status_message(gui):
-    assert gui.status_message == ''
-    gui.status_message = ':hello world!'
-    assert gui.status_message == ':hello world!'
+    assert gui.status_message == ""
+    gui.status_message = ":hello world!"
+    assert gui.status_message == ":hello world!"
 
     gui.lock_status()
-    gui.status_message = ''
-    assert gui.status_message == ':hello world!'
+    gui.status_message = ""
+    assert gui.status_message == ":hello world!"
     gui.unlock_status()
-    gui.status_message = ''
-    assert gui.status_message == ''
+    gui.status_message = ""
+    assert gui.status_message == ""
 
 
 def test_gui_geometry_state(tempdir, qtbot):

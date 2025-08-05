@@ -15,4 +15,4 @@ class ExampleIPythonViewPlugin(IPlugin):
                 view.inject(wv=gui.get_view(WaveformView))
 
         # Open an IPython view if there is not already one.
-        controller.at_least_one_view('IPythonView')
+        controller.at_least_one_view("IPythonView")

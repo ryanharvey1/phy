@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 # Feature view
 # -----------------------------------------------------------------------------
 
+
 def _get_default_grid():
     """In the grid specification, 0 corresponds to the best channel, 1
     to the second best, and so on. A, B, C refer to the PC components."""
@@ -34,27 +35,27 @@ def _get_default_grid():
     0A,0B   1A,0B   time,0B 1B,0B
     0A,1B   1A,1B   0B,1B   time,1B
     """.strip()
-    return [[_ for _ in re.split(' +', line.strip())] for line in s.splitlines()]
+    return [[_ for _ in re.split(" +", line.strip())] for line in s.splitlines()]
 
 
 def _get_point_color(clu_idx=None):
     if clu_idx is not None:
-        color = selected_cluster_color(clu_idx, .5)
+        color = selected_cluster_color(clu_idx, 0.5)
     else:
-        color = (.5,) * 4
+        color = (0.5,) * 4
     assert len(color) == 4
     return color
 
 
 def _get_point_masks(masks=None, clu_idx=None):
-    masks = masks if masks is not None else 1.
+    masks = masks if masks is not None else 1.0
     # NOTE: we add the cluster relative index for the computation of the depth on the GPU.
-    return masks * .99999 + (clu_idx or 0)
+    return masks * 0.99999 + (clu_idx or 0)
 
 
 def _get_masks_max(px, py):
-    mx = px.get('masks', None)
-    my = py.get('masks', None)
+    mx = px.get("masks", None)
+    my = py.get("masks", None)
     if mx is None or my is None:
         return None
     return np.maximum(mx, my)
@@ -92,33 +93,35 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
     # Do not show too many clusters.
     max_n_clusters = 8
 
-    _default_position = 'right'
+    _default_position = "right"
     cluster_ids = ()
 
     # Whether to disable automatic selection of channels.
     fixed_channels = False
-    feature_scaling = 1.
+    feature_scaling = 1.0
 
     default_shortcuts = {
-        'change_marker_size': 'alt+wheel',
-        'increase': 'ctrl++',
-        'decrease': 'ctrl+-',
-        'add_lasso_point': 'ctrl+click',
-        'stop_lasso': 'ctrl+right click',
-        'toggle_automatic_channel_selection': 'c',
+        "change_marker_size": "alt+wheel",
+        "increase": "ctrl++",
+        "decrease": "ctrl+-",
+        "add_lasso_point": "ctrl+click",
+        "stop_lasso": "ctrl+right click",
+        "toggle_automatic_channel_selection": "c",
     }
 
     def __init__(self, features=None, attributes=None, **kwargs):
         super(FeatureView, self).__init__(**kwargs)
-        self.state_attrs += ('fixed_channels', 'feature_scaling')
+        self.state_attrs += ("fixed_channels", "feature_scaling")
 
         assert features
         self.features = features
         self._lim = 1
 
-        self.grid_dim = _get_default_grid()  # 2D array where every item a string like `0A,1B`
+        self.grid_dim = (
+            _get_default_grid()
+        )  # 2D array where every item a string like `0A,1B`
         self.n_rows, self.n_cols = np.array(self.grid_dim).shape
-        self.canvas.set_layout('grid', shape=(self.n_rows, self.n_cols))
+        self.canvas.set_layout("grid", shape=(self.n_rows, self.n_cols))
         self.canvas.enable_lasso()
 
         # Channels being shown.
@@ -162,7 +165,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         for i in range(self.n_rows):
             for j in range(self.n_cols):
                 dim = self.grid_dim[i][j]
-                dim_x, dim_y = dim.split(',')
+                dim_x, dim_y = dim.split(",")
                 yield i, j, dim_x, dim_y
 
     def _get_axis_label(self, dim):
@@ -179,7 +182,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         if self.channel_ids is None:
             return
         assert dim not in self.attributes  # This is called only on PC data.
-        s = 'ABCDEFGHIJ'
+        s = "ABCDEFGHIJ"
         # Channel relative index, typically just 0 or 1.
         c_rel = int(dim[:-1])
         # Get the channel_id from the currently-selected channels.
@@ -196,7 +199,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         """
         if dim in self.attributes:
             return self.attributes[dim](cluster_id, load_all=load_all)
-        masks = bunch.get('masks', None)
+        masks = bunch.get("masks", None)
         channel_id, pc = self._get_channel_and_pc(dim)
         # Skip the plot if the channel id is not displayed.
         if channel_id not in bunch.channel_ids:  # pragma: no cover
@@ -211,7 +214,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         """Return the min/max of an axis."""
         if dim in self.attributes:
             # Attribute: specified lim, or compute the min/max.
-            vmin, vmax = bunch.get('lim', (0, 0))
+            vmin, vmax = bunch.get("lim", (0, 0))
             assert vmin is not None
             assert vmax is not None
             return vmin, vmax
@@ -238,7 +241,8 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
             # Prepare the batch visual with all subplots
             # for the selected cluster.
             self.visual.add_batch_data(
-                x=px.data, y=py.data,
+                x=px.data,
+                y=py.data,
                 color=_get_point_color(clu_idx),
                 # Reduced marker size for background features
                 size=self._marker_size,
@@ -260,7 +264,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
                 box_index=(i, j),
             )
             self.text_visual.add_batch_data(
-                pos=[0, -1.],
+                pos=[0, -1.0],
                 anchor=[0, 1],
                 text=label_x,
                 data_bounds=None,
@@ -271,9 +275,8 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         self.line_visual.reset_batch()
         for i, j, dim_x, dim_y in self._iter_subplots():
             self.line_visual.add_batch_data(
-                pos=[[-1., 0., +1., 0.],
-                     [0., -1., 0., +1.]],
-                color=(.5, .5, .5, .5),
+                pos=[[-1.0, 0.0, +1.0, 0.0], [0.0, -1.0, 0.0, +1.0]],
+                color=(0.5, 0.5, 0.5, 0.5),
                 box_index=(i, j),
                 data_bounds=None,
             )
@@ -282,7 +285,10 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
     def _get_lim(self, bunchs):
         if not bunchs:  # pragma: no cover
             return 1
-        m, M = min(bunch.data.min() for bunch in bunchs), max(bunch.data.max() for bunch in bunchs)
+        m, M = (
+            min(bunch.data.min() for bunch in bunchs),
+            max(bunch.data.max() for bunch in bunchs),
+        )
         M = max(abs(m), abs(M))
         return M
 
@@ -306,7 +312,9 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         # Specify the channel ids if these are fixed, otherwise
         # choose the first cluster's best channels.
         c = self.channel_ids if fixed_channels else None
-        bunchs = [self.features(cluster_id, channel_ids=c) for cluster_id in self.cluster_ids]
+        bunchs = [
+            self.features(cluster_id, channel_ids=c) for cluster_id in self.cluster_ids
+        ]
         bunchs = [b for b in bunchs if b]
         if not bunchs:  # pragma: no cover
             return []
@@ -314,30 +322,38 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
             bunch.cluster_id = cluster_id
 
         # Choose the channels based on the first selected cluster.
-        channel_ids = list(bunchs[0].get('channel_ids', [])) if bunchs else []
+        channel_ids = list(bunchs[0].get("channel_ids", [])) if bunchs else []
         common_channels = list(channel_ids)
         # Intersection (with order kept) of channels belonging to all clusters.
         for bunch in bunchs:
-            common_channels = [c for c in bunch.get('channel_ids', []) if c in common_channels]
+            common_channels = [
+                c for c in bunch.get("channel_ids", []) if c in common_channels
+            ]
         # The selected channels will be (1) the channels common to all clusters, followed
         # by (2) remaining channels from the first cluster (excluding those already selected
         # in (1)).
         n = len(channel_ids)
         not_common_channels = [c for c in channel_ids if c not in common_channels]
-        channel_ids = common_channels + not_common_channels[:n - len(common_channels)]
+        channel_ids = common_channels + not_common_channels[: n - len(common_channels)]
         assert len(channel_ids) > 0
 
         # Choose the channels automatically unless fixed_channels is set.
-        if (not fixed_channels or self.channel_ids is None):
+        if not fixed_channels or self.channel_ids is None:
             self.channel_ids = channel_ids
         assert len(self.channel_ids)
 
         # Channel labels.
         self.channel_labels = {}
         for d in bunchs:
-            chl = d.get('channel_labels', ['%d' % ch for ch in d.get('channel_ids', [])])
-            self.channel_labels.update({
-                channel_id: chl[i] for i, channel_id in enumerate(d.get('channel_ids', []))})
+            chl = d.get(
+                "channel_labels", ["%d" % ch for ch in d.get("channel_ids", [])]
+            )
+            self.channel_labels.update(
+                {
+                    channel_id: chl[i]
+                    for i, channel_id in enumerate(d.get("channel_ids", []))
+                }
+            )
 
         return bunchs
 
@@ -345,11 +361,14 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         """Update the view with the selected clusters."""
 
         # Determine whether the channels should be fixed or not.
-        added = kwargs.get('up', {}).get('added', None)
+        added = kwargs.get("up", {}).get("added", None)
         # Fix the channels if the view updates after a cluster event
         # and there are new clusters.
         fixed_channels = (
-            self.fixed_channels or kwargs.get('fixed_channels', None) or added is not None)
+            self.fixed_channels
+            or kwargs.get("fixed_channels", None)
+            or added is not None
+        )
 
         # Get the clusters data.
         bunchs = self.get_clusters_data(fixed_channels=fixed_channels)
@@ -389,7 +408,9 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
 
         self.actions.add(
             self.toggle_automatic_channel_selection,
-            checked=not self.fixed_channels, checkable=True)
+            checked=not self.fixed_channels,
+            checkable=True,
+        )
         self.actions.add(self.clear_channels)
         self.actions.separator()
 
@@ -400,9 +421,9 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
     @property
     def status(self):
         if self.channel_ids is None:  # pragma: no cover
-            return ''
+            return ""
         channel_labels = [self.channel_labels[ch] for ch in self.channel_ids[:2]]
-        return 'channels: %s' % ', '.join(channel_labels)
+        return "channels: %s" % ", ".join(channel_labels)
 
     # Dimension selection
     # -------------------------------------------------------------------------
@@ -421,7 +442,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         if key is not None:
             d = np.clip(len(channels) - 1, 0, key - 1)
         else:
-            d = 0 if button == 'Left' else 1
+            d = 0 if button == "Left" else 1
         # Change the first or second best channel.
         old = channels[d]
         # Avoid updating the view if the channel doesn't change.
@@ -442,20 +463,25 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
     def on_mouse_click(self, e):
         """Select a feature dimension by clicking on a box in the feature view."""
         b = e.button
-        if 'Alt' in e.modifiers:
+        if "Alt" in e.modifiers:
             # Get mouse position in NDC.
             (i, j), _ = self.canvas.grid.box_map(e.pos)
             dim = self.grid_dim[i][j]
-            dim_x, dim_y = dim.split(',')
-            dim = dim_x if b == 'Left' else dim_y
-            other_dim = dim_y if b == 'Left' else dim_x
+            dim_x, dim_y = dim.split(",")
+            dim = dim_x if b == "Left" else dim_y
+            other_dim = dim_y if b == "Left" else dim_x
             if dim not in self.attributes:
                 # When a regular (channel, PC) dimension is selected.
                 channel_pc = self._get_channel_and_pc(dim)
                 if channel_pc is None:
                     return
                 channel_id, pc = channel_pc
-                logger.debug("Click on feature dim %s, channel id %s, PC %s.", dim, channel_id, pc)
+                logger.debug(
+                    "Click on feature dim %s, channel id %s, PC %s.",
+                    dim,
+                    channel_id,
+                    pc,
+                )
             else:
                 # When the selected dimension is an attribute, e.g. "time".
                 pc = None
@@ -463,18 +489,18 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
                 channel_pc = self._get_channel_and_pc(other_dim)
                 channel_id = channel_pc[0] if channel_pc is not None else None
                 logger.debug("Click on feature dim %s.", dim)
-            emit('select_feature', self, dim=dim, channel_id=channel_id, pc=pc)
+            emit("select_feature", self, dim=dim, channel_id=channel_id, pc=pc)
 
     def on_request_split(self, sender=None):
         """Return the spikes enclosed by the lasso."""
-        if (self.canvas.lasso.count < 3 or not len(self.cluster_ids)):  # pragma: no cover
+        if self.canvas.lasso.count < 3 or not len(self.cluster_ids):  # pragma: no cover
             return np.array([], dtype=np.int64)
         assert len(self.channel_ids)
 
         # Get the dimensions of the lassoed subplot.
         i, j = self.canvas.layout.active_box
         dim = self.grid_dim[i][j]
-        dim_x, dim_y = dim.split(',')
+        dim_x, dim_y = dim.split(",")
 
         # Get all points from all clusters.
         pos = []
@@ -482,7 +508,9 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
 
         for cluster_id in self.cluster_ids:
             # Load all spikes.
-            bunch = self.features(cluster_id, channel_ids=self.channel_ids, load_all=True)
+            bunch = self.features(
+                cluster_id, channel_ids=self.channel_ids, load_all=True
+            )
             if not bunch:
                 continue
             px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id, load_all=True)

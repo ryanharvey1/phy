@@ -3,9 +3,9 @@
 """Plotting interface."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 
@@ -19,18 +19,26 @@ from .base import BaseCanvas
 from .interact import Grid, Boxed, Stacked, Lasso
 from .panzoom import PanZoom
 from .visuals import (
-    ScatterVisual, UniformScatterVisual, PlotVisual, UniformPlotVisual,
-    HistogramVisual, TextVisual, LineVisual, PolygonVisual,
-    DEFAULT_COLOR)
+    ScatterVisual,
+    UniformScatterVisual,
+    PlotVisual,
+    UniformPlotVisual,
+    HistogramVisual,
+    TextVisual,
+    LineVisual,
+    PolygonVisual,
+    DEFAULT_COLOR,
+)
 from .transform import NDC
 from phylib.utils._types import _as_tuple
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Plotting interface
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class PlotCanvas(BaseCanvas):
     """Plotting canvas that supports different layouts, subplots, lasso, axes, panzoom."""
@@ -58,32 +66,38 @@ class PlotCanvas(BaseCanvas):
             self.enable_lasso()
 
     def set_layout(
-            self, layout=None, shape=None, n_plots=None, origin=None,
-            box_pos=None, has_clip=True):
+        self,
+        layout=None,
+        shape=None,
+        n_plots=None,
+        origin=None,
+        box_pos=None,
+        has_clip=True,
+    ):
         """Set the plot layout: grid, boxed, stacked, or None."""
 
         self.layout = layout
 
         # Constrain pan zoom.
-        if layout == 'grid':
+        if layout == "grid":
             self._current_box_index = (0, 0)
             self.grid = Grid(shape, has_clip=has_clip)
             self.grid.attach(self)
             self.interact = self.grid
 
-        elif layout == 'boxed':
+        elif layout == "boxed":
             self.n_plots = len(box_pos)
             self.boxed = Boxed(box_pos=box_pos)
             self.boxed.attach(self)
             self.interact = self.boxed
 
-        elif layout == 'stacked':
+        elif layout == "stacked":
             self.n_plots = n_plots
             self.stacked = Stacked(n_plots, origin=origin)
             self.stacked.attach(self)
             self.interact = self.stacked
 
-        if layout == 'grid' and shape is not None:
+        if layout == "grid" and shape is not None:
             self.interact.add_boxes(self)
 
     def __getitem__(self, box_index):
@@ -118,9 +132,9 @@ class PlotCanvas(BaseCanvas):
             visual,
             # Remove special reserved keywords from kwargs, which is otherwise supposed to
             # contain data for visual.set_data().
-            clearable=kwargs.pop('clearable', True),
-            key=kwargs.pop('key', None),
-            exclude_origins=kwargs.pop('exclude_origins', ()),
+            clearable=kwargs.pop("clearable", True),
+            key=kwargs.pop("key", None),
+            exclude_origins=kwargs.pop("exclude_origins", ()),
         )
         self.update_visual(visual, *args, **kwargs)
 
@@ -134,7 +148,7 @@ class PlotCanvas(BaseCanvas):
             kwargs.update(visual._acc.data)
             # If the batch accumulator has box_index, we get it in kwargs now.
         # We remove the box_index before calling set_data().
-        box_index = kwargs.pop('box_index', None)
+        box_index = kwargs.pop("box_index", None)
         # If no data was obtained at this point, we return.
         if box_index is None and not kwargs:
             return visual
@@ -150,18 +164,25 @@ class PlotCanvas(BaseCanvas):
         return visual
 
     # Plot methods
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     def scatter(self, *args, **kwargs):
         """Add a standalone (no batch) scatter plot."""
-        return self.add_visual(ScatterVisual(marker=kwargs.pop('marker', None)), *args, **kwargs)
+        return self.add_visual(
+            ScatterVisual(marker=kwargs.pop("marker", None)), *args, **kwargs
+        )
 
     def uscatter(self, *args, **kwargs):
         """Add a standalone (no batch) uniform scatter plot."""
-        return self.add_visual(UniformScatterVisual(
-            marker=kwargs.pop('marker', None),
-            color=kwargs.pop('color', None),
-            size=kwargs.pop('size', None)), *args, **kwargs)
+        return self.add_visual(
+            UniformScatterVisual(
+                marker=kwargs.pop("marker", None),
+                color=kwargs.pop("color", None),
+                size=kwargs.pop("size", None),
+            ),
+            *args,
+            **kwargs,
+        )
 
     def plot(self, *args, **kwargs):
         """Add a standalone (no batch) plot."""
@@ -169,7 +190,9 @@ class PlotCanvas(BaseCanvas):
 
     def uplot(self, *args, **kwargs):
         """Add a standalone (no batch) uniform plot."""
-        return self.add_visual(UniformPlotVisual(color=kwargs.pop('color', None)), *args, **kwargs)
+        return self.add_visual(
+            UniformPlotVisual(color=kwargs.pop("color", None)), *args, **kwargs
+        )
 
     def lines(self, *args, **kwargs):
         """Add a standalone (no batch) line plot."""
@@ -177,7 +200,9 @@ class PlotCanvas(BaseCanvas):
 
     def text(self, *args, **kwargs):
         """Add a standalone (no batch) text plot."""
-        return self.add_visual(TextVisual(color=kwargs.pop('color', None)), *args, **kwargs)
+        return self.add_visual(
+            TextVisual(color=kwargs.pop("color", None)), *args, **kwargs
+        )
 
     def polygon(self, *args, **kwargs):
         """Add a standalone (no batch) polygon plot."""
@@ -188,7 +213,7 @@ class PlotCanvas(BaseCanvas):
         return self.add_visual(HistogramVisual(), *args, **kwargs)
 
     # Enable methods
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     def enable_panzoom(self):
         """Enable pan zoom in the canvas."""
@@ -206,9 +231,10 @@ class PlotCanvas(BaseCanvas):
         self.axes.attach(self)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Matplotlib plotting interface
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _zoom_fun(ax, event):  # pragma: no cover
     cur_xlim = ax.get_xlim()
@@ -222,26 +248,24 @@ def _zoom_fun(ax, event):  # pragma: no cover
     y_top = ydata - cur_ylim[0]
     y_bottom = cur_ylim[1] - ydata
     k = 1.3
-    scale_factor = {'up': 1. / k, 'down': k}.get(event.button, 1.)
-    ax.set_xlim([xdata - x_left * scale_factor,
-                 xdata + x_right * scale_factor])
-    ax.set_ylim([ydata - y_top * scale_factor,
-                 ydata + y_bottom * scale_factor])
+    scale_factor = {"up": 1.0 / k, "down": k}.get(event.button, 1.0)
+    ax.set_xlim([xdata - x_left * scale_factor, xdata + x_right * scale_factor])
+    ax.set_ylim([ydata - y_top * scale_factor, ydata + y_bottom * scale_factor])
 
 
 _MPL_MARKER = {
-    'arrow': '>',
-    'asterisk': '*',
-    'chevron': '^',
-    'club': 'd',
-    'cross': 'x',
-    'diamond': 'D',
-    'disc': 'o',
-    'ellipse': 'o',
-    'hbar': '_',
-    'square': 's',
-    'triangle': '^',
-    'vbar': '|',
+    "arrow": ">",
+    "asterisk": "*",
+    "chevron": "^",
+    "club": "d",
+    "cross": "x",
+    "diamond": "D",
+    "disc": "o",
+    "ellipse": "o",
+    "hbar": "_",
+    "square": "s",
+    "triangle": "^",
+    "vbar": "|",
 }
 
 
@@ -254,28 +278,29 @@ class PlotCanvasMpl(object):
     axes = None
 
     def __init__(self, *args, **kwargs):
-        plt.style.use('dark_background')
-        mpl.rcParams['toolbar'] = 'None'
-        mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=[DEFAULT_COLOR])
+        plt.style.use("dark_background")
+        mpl.rcParams["toolbar"] = "None"
+        mpl.rcParams["axes.prop_cycle"] = mpl.cycler(color=[DEFAULT_COLOR])
         self.figure = plt.figure()
         self.subplots()
 
-    def set_layout(self, layout=None, shape=None, n_plots=None, origin=None, box_pos=None):
-
+    def set_layout(
+        self, layout=None, shape=None, n_plots=None, origin=None, box_pos=None
+    ):
         self.layout = layout
 
         # Constrain pan zoom.
-        if layout == 'grid':
+        if layout == "grid":
             self.subplots(shape[0], shape[1])
             self._current_box_index = (0, 0)
 
-        elif layout == 'boxed':  # pragma: no cover
+        elif layout == "boxed":  # pragma: no cover
             self.n_plots = len(box_pos)
             # self.boxed = Boxed(box_pos=box_pos)
             # TODO
             raise NotImplementedError()
 
-        elif layout == 'stacked':  # pragma: no cover
+        elif layout == "stacked":  # pragma: no cover
             self.n_plots = n_plots
             # self.stacked = Stacked(n_plots, margin=.1, origin=origin)
             # TODO
@@ -296,22 +321,22 @@ class PlotCanvasMpl(object):
         xaxis = ax.get_xaxis()
         yaxis = ax.get_yaxis()
 
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
-        xaxis.set_ticks_position('bottom')
-        xaxis.set_tick_params(direction='out')
+        xaxis.set_ticks_position("bottom")
+        xaxis.set_tick_params(direction="out")
 
-        yaxis.set_ticks_position('left')
-        yaxis.set_tick_params(direction='out')
+        yaxis.set_ticks_position("left")
+        yaxis.set_tick_params(direction="out")
 
-        ax.grid(color='w', alpha=.2)
+        ax.grid(color="w", alpha=0.2)
 
         def on_zoom(event):  # pragma: no cover
             _zoom_fun(ax, event)
             self.show()
 
-        self.canvas.mpl_connect('scroll_event', on_zoom)
+        self.canvas.mpl_connect("scroll_event", on_zoom)
 
     def __getitem__(self, box_index):
         self._current_box_index = _as_tuple(box_index)
@@ -347,9 +372,17 @@ class PlotCanvasMpl(object):
         self.ax.set_ylim(y0, y1)
 
     def scatter(
-            self, x=None, y=None, pos=None, color=None,
-            size=None, depth=None, data_bounds=None, marker=None):
-        self.ax.scatter(x, y, c=color, s=size, marker=_MPL_MARKER.get(marker, 'o'))
+        self,
+        x=None,
+        y=None,
+        pos=None,
+        color=None,
+        size=None,
+        depth=None,
+        data_bounds=None,
+        marker=None,
+    ):
+        self.ax.scatter(x, y, c=color, s=size, marker=_MPL_MARKER.get(marker, "o"))
         self.set_data_bounds(data_bounds)
 
     def plot(self, x=None, y=None, color=None, depth=None, data_bounds=None):
@@ -360,7 +393,7 @@ class PlotCanvasMpl(object):
         assert hist is not None
         n = len(hist)
         x = np.linspace(-1, 1, n)
-        self.ax.bar(x, hist, width=2. / (n - 1), color=color)
+        self.ax.bar(x, hist, width=2.0 / (n - 1), color=color)
         self.set_data_bounds((-1, 0, +1, ylim))
 
     def lines(self, pos=None, color=None, data_bounds=None):
@@ -371,10 +404,9 @@ class PlotCanvasMpl(object):
         self.ax.plot(x, y, c=color)
         self.set_data_bounds(data_bounds)
 
-    def text(self, pos=None, text=None, anchor=None,
-             data_bounds=None, color=None):
+    def text(self, pos=None, text=None, anchor=None, data_bounds=None, color=None):
         pos = np.atleast_2d(pos)
-        self.ax.text(pos[:, 0], pos[:, 1], text, color=color or 'w')
+        self.ax.text(pos[:, 0], pos[:, 1], text, color=color or "w")
         self.set_data_bounds(data_bounds)
 
     def polygon(self, pos=None, data_bounds=None):

@@ -16,8 +16,8 @@ class ExampleColorSchemePlugin(IPlugin):
                 # Each view has a set of color schemes among which one can cycle through in
                 # the GUI.
                 view.add_color_scheme(
-                    name='mycolorscheme',
+                    name="mycolorscheme",
                     fun=controller.get_cluster_amplitude,  # cluster_id => value
-                    colormap='rainbow',  # or use a colorcet color map or a custom N*3 array
+                    colormap="rainbow",  # or use a colorcet color map or a custom N*3 array
                     cluster_ids=cluster_ids,
                 )

@@ -13,7 +13,6 @@ Just run this script to (re)create the font map directly in phy/plot/static/ in 
 
 """
 
-
 import gzip
 import os
 from pathlib import Path
@@ -21,19 +20,24 @@ from pathlib import Path
 import imageio
 import numpy as np
 
-from phy.plot.visuals import FONT_MAP_SIZE, FONT_MAP_PATH, SDF_SIZE, FONT_MAP_CHARS, GLYPH_SIZE
+from phy.plot.visuals import (
+    FONT_MAP_SIZE,
+    FONT_MAP_PATH,
+    SDF_SIZE,
+    FONT_MAP_CHARS,
+    GLYPH_SIZE,
+)
 
 
 class FontMapGenerator(object):
-    """Generate a SDF font map for a monospace font, with a given uniform glyph size.
+    """Generate a SDF font map for a monospace font, with a given uniform glyph size."""
 
-    """
     def __init__(self):
         self.rows, self.cols = FONT_MAP_SIZE
         self.font_map_output = FONT_MAP_PATH
-        self.glyph_output = Path(__file__).parent / '_tmp.png'
-        self.font = Path(__file__).parent / 'SourceCodePro-Regular.ttf'
-        self.msdfgen_path = Path(__file__).parent / 'msdfgen'
+        self.glyph_output = Path(__file__).parent / "_tmp.png"
+        self.font = Path(__file__).parent / "SourceCodePro-Regular.ttf"
+        self.msdfgen_path = Path(__file__).parent / "msdfgen"
         self.size = SDF_SIZE
         self.width, self.height = GLYPH_SIZE
         self.chars = FONT_MAP_CHARS
@@ -54,9 +58,10 @@ class FontMapGenerator(object):
     def _get_cmd(self, char_number):
         """Command that generates a glyph signed distance field PNG to be used in the font map."""
         return (
-            f'{self.msdfgen_path} msdf -font {self.font} {char_number} -o {self.glyph_output} '
-            f'-size {self.width} {self.height} '
-            '-pxrange 4 -scale 3.9 -translate 0.5 4')
+            f"{self.msdfgen_path} msdf -font {self.font} {char_number} -o {self.glyph_output} "
+            f"-size {self.width} {self.height} "
+            "-pxrange 4 -scale 3.9 -translate 0.5 4"
+        )
 
     def _get_glyph_array(self, char_number):
         """Return the NumPy array with a glyph, by calling the msdfgen tool."""
@@ -67,7 +72,9 @@ class FontMapGenerator(object):
 
     def _make_font_map(self):
         """Create the font map by putting together all used glyphs."""
-        Z = np.zeros((self.height * self.rows, self.width * self.cols, 3), dtype=np.uint8)
+        Z = np.zeros(
+            (self.height * self.rows, self.width * self.cols, 3), dtype=np.uint8
+        )
         for i, j in self._iter_table():
             char_number = self._get_char_number(i, j)
             x0, x1, y0, y1 = self._get_glyph_range(i, j)
@@ -78,11 +85,11 @@ class FontMapGenerator(object):
     def make(self):
         """Create the font map and save it in phy/plot/static."""
         Z = self._make_font_map()
-        with gzip.open(str(self.font_map_output), 'wb') as f:
+        with gzip.open(str(self.font_map_output), "wb") as f:
             np.save(f, Z)
         os.remove(self.glyph_output)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     fmg = FontMapGenerator()
     fmg.make()

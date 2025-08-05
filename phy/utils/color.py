@@ -2,9 +2,9 @@
 
 """Color routines."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import colorcet as cc
 import logging
@@ -19,11 +19,12 @@ from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Random colors
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-def _random_color(h_range=(0., 1.), s_range=(.5, 1.), v_range=(.5, 1.)):
+
+def _random_color(h_range=(0.0, 1.0), s_range=(0.5, 1.0), v_range=(0.5, 1.0)):
     """Generate a random RGB color."""
     h, s, v = uniform(*h_range), uniform(*s_range), uniform(*v_range)
     r, g, b = hsv_to_rgb(np.array([[[h, s, v]]])).flat
@@ -55,9 +56,9 @@ def _random_bright_color():
 
 def _hex_to_triplet(h):
     """Convert an hexadecimal color to a triplet of int8 integers."""
-    if h.startswith('#'):
+    if h.startswith("#"):
         h = h[1:]
-    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+    return tuple(int(h[i : i + 2], 16) for i in (0, 2, 4))
 
 
 def _override_hsv(rgb, h=None, s=None, v=None):
@@ -69,9 +70,10 @@ def _override_hsv(rgb, h=None, s=None, v=None):
     return r, g, b
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Colormap utilities
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _selected_cluster_idx(selected_clusters, cluster_ids):
     selected_clusters = np.asarray(selected_clusters, dtype=np.int32)
@@ -115,9 +117,10 @@ def _categorical_colormap(colormap, values, vmin=None, vmax=None, categorize=Non
     return colormap[x % n, :]
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Colormaps
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 # Default color map for the selected clusters.
 # see https://colorcet.pyviz.org/user_guide/Categorical.html
@@ -134,17 +137,19 @@ def _make_default_colormap():
 
 def _make_cluster_group_colormap():
     """Return cluster group colormap."""
-    return np.array([
-        [0.4, 0.4, 0.4],  # noise
-        [0.5, 0.5, 0.5],  # mua
-        [0.5254, 0.8196, 0.42745],  # good
-        [0.75, 0.75, 0.75],  # '' (None = '' = unsorted)
-    ])
+    return np.array(
+        [
+            [0.4, 0.4, 0.4],  # noise
+            [0.5, 0.5, 0.5],  # mua
+            [0.5254, 0.8196, 0.42745],  # good
+            [0.75, 0.75, 0.75],  # '' (None = '' = unsorted)
+        ]
+    )
 
 
 """Built-in colormaps."""
 colormaps = Bunch(
-    blank=np.array([[.75, .75, .75]]),
+    blank=np.array([[0.75, 0.75, 0.75]]),
     default=_make_default_colormap(),
     cluster_group=_make_cluster_group_colormap(),
     categorical=np.array(cc.glasbey_bw_minc_20_minl_30),
@@ -154,7 +159,7 @@ colormaps = Bunch(
 )
 
 
-def selected_cluster_color(i, alpha=1.):
+def selected_cluster_color(i, alpha=1.0):
     """Return the color, as a 4-tuple, of the i-th selected cluster."""
     return add_alpha(tuple(colormaps.default[i % len(colormaps.default)]), alpha=alpha)
 
@@ -179,7 +184,9 @@ def spike_colors(spike_clusters, cluster_ids):
 
     """
     spike_clusters_idx = _index_of(spike_clusters, cluster_ids)
-    return add_alpha(colormaps.default[np.mod(spike_clusters_idx, colormaps.default.shape[0])])
+    return add_alpha(
+        colormaps.default[np.mod(spike_clusters_idx, colormaps.default.shape[0])]
+    )
 
 
 def _add_selected_clusters_colors(selected_clusters, cluster_ids, cluster_colors=None):
@@ -194,11 +201,12 @@ def _add_selected_clusters_colors(selected_clusters, cluster_ids, cluster_colors
     return cluster_colors
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Cluster color selector
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-def add_alpha(c, alpha=1.):
+
+def add_alpha(c, alpha=1.0):
     """Add an alpha channel to an RGB color.
 
     Parameters
@@ -227,7 +235,7 @@ def _categorize(values):
     """Categorize a list of values by replacing strings and None values by integers."""
     if any(isinstance(v, str) for v in values):
         # HACK: replace None by empty string to avoid error when sorting the unique values.
-        values = [str(v).lower() if v is not None else '' for v in values]
+        values = [str(v).lower() if v is not None else "" for v in values]
         uv = sorted(set(values))
         values = [uv.index(v) for v in values]
     return values
@@ -235,19 +243,28 @@ def _categorize(values):
 
 class ClusterColorSelector(object):
     """Assign a color to clusters depending on cluster labels or metrics."""
+
     _colormap = colormaps.categorical
     _categorical = True
     _logarithmic = False
 
     def __init__(
-            self, fun=None, colormap=None, categorical=None, logarithmic=None, cluster_ids=None):
+        self,
+        fun=None,
+        colormap=None,
+        categorical=None,
+        logarithmic=None,
+        cluster_ids=None,
+    ):
         self.cluster_ids = cluster_ids if cluster_ids is not None else ()
         self._fun = fun
         self.set_color_mapping(
-            fun=fun, colormap=colormap, categorical=categorical, logarithmic=logarithmic)
+            fun=fun, colormap=colormap, categorical=categorical, logarithmic=logarithmic
+        )
 
     def set_color_mapping(
-            self, fun=None, colormap=None, categorical=None, logarithmic=None):
+        self, fun=None, colormap=None, categorical=None, logarithmic=None
+    ):
         """Set the field used to choose the cluster colors, and the associated colormap.
 
         Parameters
@@ -268,8 +285,12 @@ class ClusterColorSelector(object):
         if isinstance(colormap, str):
             colormap = colormaps[colormap]
         self._colormap = colormap if colormap is not None else self._colormap
-        self._categorical = categorical if categorical is not None else self._categorical
-        self._logarithmic = logarithmic if logarithmic is not None else self._logarithmic
+        self._categorical = (
+            categorical if categorical is not None else self._categorical
+        )
+        self._logarithmic = (
+            logarithmic if logarithmic is not None else self._logarithmic
+        )
         # Recompute the value range.
         self.set_cluster_ids(self.cluster_ids)
 
@@ -304,14 +325,18 @@ class ClusterColorSelector(object):
             vmin, vmax = self.vmin, self.vmax
         assert values is not None
         # Use categorical or continuous colormap depending on the categorical option.
-        f = (_categorical_colormap
-             if self._categorical and np.issubdtype(values.dtype, np.integer)
-             else _continuous_colormap)
+        f = (
+            _categorical_colormap
+            if self._categorical and np.issubdtype(values.dtype, np.integer)
+            else _continuous_colormap
+        )
         return f(self._colormap, values, vmin=vmin, vmax=vmax)
 
     def _get_cluster_value(self, cluster_id):
         """Return the field value for a given cluster."""
-        return self._fun(cluster_id) if hasattr(self._fun, '__call__') else self._fun or 0
+        return (
+            self._fun(cluster_id) if hasattr(self._fun, "__call__") else self._fun or 0
+        )
 
     def get(self, cluster_id, alpha=None):
         """Return the RGBA color of a single cluster."""
@@ -330,7 +355,7 @@ class ClusterColorSelector(object):
             values = _categorize(values)
         return np.array(values)
 
-    def get_colors(self, cluster_ids, alpha=1.):
+    def get_colors(self, cluster_ids, alpha=1.0):
         """Return the RGBA colors of some clusters."""
         values = self.get_values(cluster_ids)
         assert values is not None

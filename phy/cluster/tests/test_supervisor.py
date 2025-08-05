@@ -2,11 +2,11 @@
 
 """Test GUI component."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-#from contextlib import contextmanager
+# from contextlib import contextmanager
 
 from pytest import fixture
 import numpy as np
@@ -14,7 +14,12 @@ from numpy.testing import assert_array_equal as ae
 
 from .. import supervisor as _supervisor
 from ..supervisor import (
-    Supervisor, TaskLogger, ClusterView, SimilarityView, ActionCreator)
+    Supervisor,
+    TaskLogger,
+    ClusterView,
+    SimilarityView,
+    ActionCreator,
+)
 from phy.gui import GUI
 from phy.gui.widgets import Barrier
 from phy.gui.qt import qInstallMessageHandler
@@ -30,9 +35,10 @@ def handler(msg_type, msg_log_context, msg_string):
 qInstallMessageHandler(handler)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Fixtures
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 @fixture
 def gui(tempdir, qtbot):
@@ -51,8 +57,9 @@ def gui(tempdir, qtbot):
 
 
 @fixture
-def supervisor(qtbot, gui, cluster_ids, cluster_groups, cluster_labels,
-               similarity, tempdir):
+def supervisor(
+    qtbot, gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+):
     spike_clusters = np.repeat(cluster_ids, 2)
 
     s = Supervisor(
@@ -61,19 +68,20 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups, cluster_labels,
         cluster_labels=cluster_labels,
         similarity=similarity,
         context=Context(tempdir),
-        sort=('id', 'desc'),
+        sort=("id", "desc"),
     )
     s.attach(gui)
     b = Barrier()
-    connect(b('cluster_view'), event='ready', sender=s.cluster_view)
-    connect(b('similarity_view'), event='ready', sender=s.similarity_view)
+    connect(b("cluster_view"), event="ready", sender=s.cluster_view)
+    connect(b("similarity_view"), event="ready", sender=s.similarity_view)
     b.wait()
     return s
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test tasks
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 @fixture
 def tl():
@@ -82,13 +90,15 @@ def tl():
 
         def select(self, cl, callback=None, **kwargs):
             self._selected = cl
-            callback({'selected': cl, 'next': cl[-1] + 1})
+            callback({"selected": cl, "next": cl[-1] + 1})
 
         def next(self, callback=None):
-            callback({'selected': [self._selected[-1] + 1], 'next': self._selected[-1] + 2})
+            callback(
+                {"selected": [self._selected[-1] + 1], "next": self._selected[-1] + 2}
+            )
 
         def previous(self, callback=None):  # pragma: no cover
-            callback({'selected': [self._selected[-1] - 1], 'next': self._selected[-1]})
+            callback({"selected": [self._selected[-1] - 1], "next": self._selected[-1]})
 
     class MockSimilarityView(MockClusterView):
         pass
@@ -119,90 +129,95 @@ def test_task_1(tl):
 
 
 def test_task_2(tl):
-    tl.enqueue(tl.cluster_view, 'select', [0])
+    tl.enqueue(tl.cluster_view, "select", [0])
     tl.process()
     assert tl.last_state() == ([0], 1, None, None)
 
 
 def test_task_3(tl):
-    tl.enqueue(tl.cluster_view, 'select', [0])
-    tl.enqueue(tl.similarity_view, 'select', [100])
+    tl.enqueue(tl.cluster_view, "select", [0])
+    tl.enqueue(tl.similarity_view, "select", [100])
     tl.process()
     assert tl.last_state() == ([0], 1, [100], 101)
 
 
 def test_task_merge(tl):
-    tl.enqueue(tl.cluster_view, 'select', [0])
-    tl.enqueue(tl.similarity_view, 'select', [100])
-    tl.enqueue(tl.supervisor, 'merge', [0, 100], 1000)
+    tl.enqueue(tl.cluster_view, "select", [0])
+    tl.enqueue(tl.similarity_view, "select", [100])
+    tl.enqueue(tl.supervisor, "merge", [0, 100], 1000)
     tl.process()
 
     assert tl.last_state() == ([1000], 1001, None, None)
 
-    tl.enqueue(tl.supervisor, 'undo')
+    tl.enqueue(tl.supervisor, "undo")
     tl.process()
     assert tl.last_state() == ([0], 1, [100], 101)
 
-    tl.enqueue(tl.supervisor, 'redo')
+    tl.enqueue(tl.supervisor, "redo")
     tl.process()
     assert tl.last_state() == ([1000], 1001, None, None)
 
 
 def test_task_split(tl):
-    tl.enqueue(tl.cluster_view, 'select', [0])
-    tl.enqueue(tl.similarity_view, 'select', [100])
-    tl.enqueue(tl.supervisor, 'split', [0, 100], [1000, 1001])
+    tl.enqueue(tl.cluster_view, "select", [0])
+    tl.enqueue(tl.similarity_view, "select", [100])
+    tl.enqueue(tl.supervisor, "split", [0, 100], [1000, 1001])
     tl.process()
 
     assert tl.last_state() == ([1000, 1001], 1002, None, None)
 
 
 def test_task_move_1(tl):
-    tl.enqueue(tl.cluster_view, 'select', [0])
-    tl.enqueue(tl.supervisor, 'move', [0], 'good')
+    tl.enqueue(tl.cluster_view, "select", [0])
+    tl.enqueue(tl.supervisor, "move", [0], "good")
     tl.process()
 
     assert tl.last_state() == ([1], 2, None, None)
 
 
 def test_task_move_best(tl):
-    tl.enqueue(tl.cluster_view, 'select', [0])
-    tl.enqueue(tl.similarity_view, 'select', [100])
-    tl.enqueue(tl.supervisor, 'move', 'best', 'good')
+    tl.enqueue(tl.cluster_view, "select", [0])
+    tl.enqueue(tl.similarity_view, "select", [100])
+    tl.enqueue(tl.supervisor, "move", "best", "good")
     tl.process()
 
     assert tl.last_state() == ([1], 2, None, None)
 
 
 def test_task_move_similar(tl):
-    tl.enqueue(tl.cluster_view, 'select', [0])
-    tl.enqueue(tl.similarity_view, 'select', [100])
-    tl.enqueue(tl.supervisor, 'move', 'similar', 'good')
+    tl.enqueue(tl.cluster_view, "select", [0])
+    tl.enqueue(tl.similarity_view, "select", [100])
+    tl.enqueue(tl.supervisor, "move", "similar", "good")
     tl.process()
 
     assert tl.last_state() == ([0], 1, [101], 102)
 
 
 def test_task_move_all(tl):
-    tl.enqueue(tl.cluster_view, 'select', [0])
-    tl.enqueue(tl.similarity_view, 'select', [100])
-    tl.enqueue(tl.supervisor, 'move', 'all', 'good')
+    tl.enqueue(tl.cluster_view, "select", [0])
+    tl.enqueue(tl.similarity_view, "select", [100])
+    tl.enqueue(tl.supervisor, "move", "all", "good")
     tl.process()
 
     assert tl.last_state() == ([1], 2, [101], 102)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test cluster and similarity views
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 @fixture
 def data():
-    _data = [{"id": i,
-              "n_spikes": 100 - 10 * i,
-              "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
-              "is_masked": i in (2, 3, 5),
-              } for i in range(10)]
+    _data = [
+        {
+            "id": i,
+            "n_spikes": 100 - 10 * i,
+            "group": {2: "noise", 3: "noise", 5: "mua", 8: "good"}.get(i, None),
+            "is_masked": i in (2, 3, 5),
+        }
+        for i in range(10)
+    ]
     return _data
 
 
@@ -210,13 +225,13 @@ def test_cluster_view_1(qtbot, gui, data):
     cv = ClusterView(gui, data=data)
     _wait_until_table_ready(qtbot, cv)
 
-    cv.sort_by('n_spikes', 'asc')
+    cv.sort_by("n_spikes", "asc")
     cv.select([1])
     qtbot.wait(10)
-    assert cv.state == {'current_sort': ('n_spikes', 'asc'), 'selected': [1]}
+    assert cv.state == {"current_sort": ("n_spikes", "asc"), "selected": [1]}
 
-    cv.set_state({'current_sort': ('id', 'desc'), 'selected': [2]})
-    assert cv.state == {'current_sort': ('id', 'desc'), 'selected': [2]}
+    cv.set_state({"current_sort": ("id", "desc"), "selected": [2]})
+    assert cv.state == {"current_sort": ("id", "desc"), "selected": [2]}
 
 
 def test_similarity_view_1(qtbot, gui, data):
@@ -225,24 +240,26 @@ def test_similarity_view_1(qtbot, gui, data):
 
     @connect(sender=sv)
     def on_request_similar_clusters(sender, cluster_id):
-        return [{'id': id} for id in (100 + cluster_id, 110 + cluster_id, 102 + cluster_id)]
+        return [
+            {"id": id} for id in (100 + cluster_id, 110 + cluster_id, 102 + cluster_id)
+        ]
 
     sv.reset([5])
     _assert(sv.get_ids, [105, 115, 107])
 
 
 def test_cluster_view_extra_columns(qtbot, gui, data):
-
     for cl in data:
-        cl['my_metrics'] = cl['id'] * 1000
+        cl["my_metrics"] = cl["id"] * 1000
 
-    cv = ClusterView(gui, data=data, columns=['id', 'n_spikes', 'my_metrics'])
+    cv = ClusterView(gui, data=data, columns=["id", "n_spikes", "my_metrics"])
     _wait_until_table_ready(qtbot, cv)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test ActionCreator
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_action_creator_1(qtbot, gui):
     ac = ActionCreator()
@@ -250,14 +267,15 @@ def test_action_creator_1(qtbot, gui):
     gui.show()
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test GUI component
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _select(supervisor, cluster_ids, similar=None):
-    supervisor.task_logger.enqueue(supervisor.cluster_view, 'select', cluster_ids)
+    supervisor.task_logger.enqueue(supervisor.cluster_view, "select", cluster_ids)
     if similar is not None:
-        supervisor.task_logger.enqueue(supervisor.similarity_view, 'select', similar)
+        supervisor.task_logger.enqueue(supervisor.similarity_view, "select", similar)
     supervisor.task_logger.process()
     supervisor.block()
     supervisor.task_logger.show_history()
@@ -280,29 +298,30 @@ def test_supervisor_busy(qtbot, supervisor):
 
     o = object()
 
-    emit('is_busy', o, True)
+    emit("is_busy", o, True)
     assert supervisor._is_busy
 
     # The action fails while the supervisor is busy.
-    emit('action', supervisor.action_creator, 'merge')
+    emit("action", supervisor.action_creator, "merge")
 
-    emit('is_busy', o, False)
+    emit("is_busy", o, False)
     assert not supervisor._is_busy
 
     # The action succeeds because the supervisor is no longer busy.
-    emit('action', supervisor.action_creator, 'merge')
+    emit("action", supervisor.action_creator, "merge")
     supervisor.block()
     assert not supervisor._is_busy
 
 
 def test_supervisor_cluster_metrics(
-        qtbot, gui, cluster_ids, cluster_groups, similarity, tempdir):
+    qtbot, gui, cluster_ids, cluster_groups, similarity, tempdir
+):
     spike_clusters = np.repeat(cluster_ids, 2)
 
     def my_metrics(cluster_id):
-        return cluster_id ** 2
+        return cluster_id**2
 
-    cluster_metrics = {'my_metrics': my_metrics}
+    cluster_metrics = {"my_metrics": my_metrics}
 
     mc = Supervisor(
         spike_clusters,
@@ -313,11 +332,11 @@ def test_supervisor_cluster_metrics(
     )
     mc.attach(gui)
     b = Barrier()
-    connect(b('cluster_view'), event='ready', sender=mc.cluster_view)
-    connect(b('similarity_view'), event='ready', sender=mc.similarity_view)
+    connect(b("cluster_view"), event="ready", sender=mc.cluster_view)
+    connect(b("similarity_view"), event="ready", sender=mc.similarity_view)
     b.wait()
 
-    assert 'my_metrics' in mc.columns
+    assert "my_metrics" in mc.columns
 
 
 def test_supervisor_select_1(qtbot, supervisor):
@@ -344,7 +363,6 @@ def test_supervisor_select_order(qtbot, supervisor):
 
 
 def test_supervisor_edge_cases(supervisor):
-
     # Empty selection at first.
     ae(supervisor.clustering.cluster_ids, [0, 1, 2, 10, 11, 20, 30])
 
@@ -375,18 +393,17 @@ def test_supervisor_edge_cases(supervisor):
     _assert_selected(supervisor, [0])
 
     # Move.
-    supervisor.move('ignored', [])
+    supervisor.move("ignored", [])
     supervisor.block()
 
     supervisor.save()
 
 
 def test_supervisor_save(qtbot, gui, supervisor):
-    emit('request_save', gui)
+    emit("request_save", gui)
 
 
 def test_supervisor_skip(qtbot, gui, supervisor):
-
     # yield [0, 1, 2, 10, 11, 20, 30]
     # #      i, g, N,  i,  g,  N, N
     expected = [30, 20, 11, 2, 1]
@@ -398,17 +415,17 @@ def test_supervisor_skip(qtbot, gui, supervisor):
 
 
 def test_supervisor_sort(qtbot, supervisor):
-    supervisor.sort('id', 'desc')
+    supervisor.sort("id", "desc")
     qtbot.wait(50)
-    assert supervisor.state.cluster_view.current_sort == ('id', 'desc')
+    assert supervisor.state.cluster_view.current_sort == ("id", "desc")
 
     supervisor.select_actions.sort_by_n_spikes()
     qtbot.wait(50)
-    assert supervisor.state.cluster_view.current_sort == ('n_spikes', 'desc')
+    assert supervisor.state.cluster_view.current_sort == ("n_spikes", "desc")
 
 
 def test_supervisor_filter(qtbot, supervisor):
-    supervisor.filter('5 <= id && id <= 20')
+    supervisor.filter("5 <= id && id <= 20")
     qtbot.wait(50)
     _cl = []
     supervisor.cluster_view.get_ids(lambda cluster_ids: _cl.extend(cluster_ids))
@@ -419,7 +436,6 @@ def test_supervisor_filter(qtbot, supervisor):
 
 
 def test_supervisor_merge_1(qtbot, supervisor):
-
     _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
 
@@ -467,17 +483,16 @@ def test_supervisor_merge_move(qtbot, supervisor):
     supervisor.block()
     _assert_selected(supervisor, [31])
 
-    supervisor.actions.move('good', 'all')
+    supervisor.actions.move("good", "all")
     supervisor.block()
     _assert_selected(supervisor, [30])
 
-    supervisor.actions.move('good', 'all')
+    supervisor.actions.move("good", "all")
     supervisor.block()
     _assert_selected(supervisor, [2])
 
 
 def test_supervisor_split_0(qtbot, supervisor):
-
     _select(supervisor, [1, 2])
     _assert_selected(supervisor, [1, 2])
 
@@ -496,7 +511,6 @@ def test_supervisor_split_0(qtbot, supervisor):
 
 
 def test_supervisor_split_1(supervisor):
-
     supervisor.select_actions.select([1, 2])
     supervisor.block()
 
@@ -516,8 +530,8 @@ def test_supervisor_split_2(gui, similarity):
     supervisor.attach(gui)
 
     b = Barrier()
-    connect(b('cluster_view'), event='ready', sender=supervisor.cluster_view)
-    connect(b('similarity_view'), event='ready', sender=supervisor.similarity_view)
+    connect(b("cluster_view"), event="ready", sender=supervisor.cluster_view)
+    connect(b("similarity_view"), event="ready", sender=supervisor.similarity_view)
     b.wait()
 
     supervisor.actions.split([0])
@@ -526,25 +540,23 @@ def test_supervisor_split_2(gui, similarity):
 
 
 def test_supervisor_state(tempdir, qtbot, gui, supervisor):
-
     supervisor.select(1)
 
     cv = supervisor.cluster_view
-    assert supervisor.state.cluster_view.current_sort == ('id', 'desc')
+    assert supervisor.state.cluster_view.current_sort == ("id", "desc")
     assert supervisor.state.cluster_view.selected == [1]
 
-    cv.sort_by('id')
-    assert supervisor.state.cluster_view.current_sort == ('id', 'asc')
+    cv.sort_by("id")
+    assert supervisor.state.cluster_view.current_sort == ("id", "asc")
 
-    cv.set_state({'current_sort': ('n_spikes', 'desc')})
-    assert supervisor.state.cluster_view.current_sort == ('n_spikes', 'desc')
+    cv.set_state({"current_sort": ("n_spikes", "desc")})
+    assert supervisor.state.cluster_view.current_sort == ("n_spikes", "desc")
 
-    cv.sort_by('id', 'desc')
+    cv.sort_by("id", "desc")
     assert supervisor.shown_cluster_ids == [30, 20, 11, 10, 2, 1, 0]
 
 
 def test_supervisor_label(supervisor):
-
     _select(supervisor, [20])
     supervisor.label("my_field", 3.14)
     supervisor.block()
@@ -552,47 +564,44 @@ def test_supervisor_label(supervisor):
     supervisor.label("my_field", 1.23, cluster_ids=30)
     supervisor.block()
 
-    assert 'my_field' in supervisor.fields
-    assert supervisor.get_labels('my_field')[20] == 3.14
-    assert supervisor.get_labels('my_field')[30] == 1.23
+    assert "my_field" in supervisor.fields
+    assert supervisor.get_labels("my_field")[20] == 3.14
+    assert supervisor.get_labels("my_field")[30] == 1.23
 
 
 def test_supervisor_label_cluster_1(supervisor):
-
     _select(supervisor, [20, 30])
     supervisor.label("my_field", 3.14)
     supervisor.block()
 
     # Same value for the old clusters.
-    l = supervisor.get_labels('my_field')
+    l = supervisor.get_labels("my_field")
     assert l[20] == l[30] == 3.14
 
     up = supervisor.merge()
     supervisor.block()
 
-    assert supervisor.get_labels('my_field')[up.added[0]] == 3.14
+    assert supervisor.get_labels("my_field")[up.added[0]] == 3.14
 
 
 def test_supervisor_label_cluster_2(supervisor):
-
     _select(supervisor, [20])
 
     supervisor.label("my_field", 3.14)
     supervisor.block()
 
     # One of the parents.
-    l = supervisor.get_labels('my_field')
+    l = supervisor.get_labels("my_field")
     assert l[20] == 3.14
     assert l[30] is None
 
     up = supervisor.merge([20, 30])
     supervisor.block()
 
-    assert supervisor.get_labels('my_field')[up.added[0]] == 3.14
+    assert supervisor.get_labels("my_field")[up.added[0]] == 3.14
 
 
 def test_supervisor_label_cluster_3(supervisor):
-
     # Conflict: largest cluster wins.
     _select(supervisor, [20, 30])
     supervisor.label("my_field", 3.14)
@@ -604,7 +613,7 @@ def test_supervisor_label_cluster_3(supervisor):
     supervisor.block()
 
     # It fot the label of its parents.
-    assert supervisor.get_labels('my_field')[new] == 3.14
+    assert supervisor.get_labels("my_field")[new] == 3.14
 
     # Now, we label a smaller cluster.
     supervisor.label("my_field", 2.718, cluster_ids=[10])
@@ -614,17 +623,16 @@ def test_supervisor_label_cluster_3(supervisor):
     supervisor.block()
 
     # The new cluster should have the value of the first, merged big cluster, i.e. 3.14.
-    assert supervisor.get_labels('my_field')[up.added[0]] == 3.14
+    assert supervisor.get_labels("my_field")[up.added[0]] == 3.14
 
 
 def test_supervisor_move_1(supervisor):
-
     _select(supervisor, [20])
     _assert_selected(supervisor, [20])
 
-    assert not supervisor.move('', '')
+    assert not supervisor.move("", "")
 
-    supervisor.actions.move('noise', 'all')
+    supervisor.actions.move("noise", "all")
     supervisor.block()
     _assert_selected(supervisor, [11])
 
@@ -638,11 +646,10 @@ def test_supervisor_move_1(supervisor):
 
 
 def test_supervisor_move_2(supervisor):
-
     _select(supervisor, [20], [10])
     _assert_selected(supervisor, [20, 10])
 
-    supervisor.actions.move('noise', 10)
+    supervisor.actions.move("noise", 10)
     supervisor.block()
     _assert_selected(supervisor, [20, 2])
 
@@ -656,7 +663,6 @@ def test_supervisor_move_2(supervisor):
 
 
 def test_supervisor_move_3(qtbot, supervisor):
-
     supervisor.select_actions.next()
     supervisor.block()
     _assert_selected(supervisor, [30])
@@ -673,13 +679,12 @@ def test_supervisor_move_3(qtbot, supervisor):
     supervisor.block()
     _assert_selected(supervisor, [2])
 
-    supervisor.cluster_meta.get('group', 30) == 'noise'
-    supervisor.cluster_meta.get('group', 20) == 'mua'
-    supervisor.cluster_meta.get('group', 11) == 'good'
+    supervisor.cluster_meta.get("group", 30) == "noise"
+    supervisor.cluster_meta.get("group", 20) == "mua"
+    supervisor.cluster_meta.get("group", 11) == "good"
 
 
 def test_supervisor_move_4(supervisor):
-
     _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
 
@@ -695,9 +700,9 @@ def test_supervisor_move_4(supervisor):
     supervisor.block()
     _assert_selected(supervisor, [30, 1])
 
-    supervisor.cluster_meta.get('group', 20) == 'noise'
-    supervisor.cluster_meta.get('group', 11) == 'mua'
-    supervisor.cluster_meta.get('group', 2) == 'good'
+    supervisor.cluster_meta.get("group", 20) == "noise"
+    supervisor.cluster_meta.get("group", 11) == "mua"
+    supervisor.cluster_meta.get("group", 2) == "good"
 
 
 def test_supervisor_move_5(supervisor):
@@ -720,18 +725,17 @@ def test_supervisor_move_5(supervisor):
     supervisor.block()
     _assert_selected(supervisor, [])
 
-    supervisor.cluster_meta.get('group', 30) == 'noise'
-    supervisor.cluster_meta.get('group', 20) == 'noise'
+    supervisor.cluster_meta.get("group", 30) == "noise"
+    supervisor.cluster_meta.get("group", 20) == "noise"
 
-    supervisor.cluster_meta.get('group', 11) == 'mua'
-    supervisor.cluster_meta.get('group', 10) == 'mua'
+    supervisor.cluster_meta.get("group", 11) == "mua"
+    supervisor.cluster_meta.get("group", 10) == "mua"
 
-    supervisor.cluster_meta.get('group', 2) == 'good'
-    supervisor.cluster_meta.get('group', 1) == 'good'
+    supervisor.cluster_meta.get("group", 2) == "good"
+    supervisor.cluster_meta.get("group", 1) == "good"
 
 
 def test_supervisor_reset(qtbot, supervisor):
-
     supervisor.select_actions.select([10, 11])
 
     supervisor.select_actions.reset_wizard()
@@ -756,7 +760,6 @@ def test_supervisor_reset(qtbot, supervisor):
 
 
 def test_supervisor_nav(qtbot, supervisor):
-
     supervisor.select_actions.reset_wizard()
     supervisor.block()
     _assert_selected(supervisor, [30])

@@ -11,7 +11,7 @@ class ExampleFilterFiringRatePlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
         def on_gui_ready(sender, gui):
-            @gui.view_actions.add(alias='fr')  # corresponds to `:fr` snippet
+            @gui.view_actions.add(alias="fr")  # corresponds to `:fr` snippet
             def filter_firing_rate(rate):
                 """Filter clusters with the firing rate."""
-                controller.supervisor.filter('fr > %.1f' % float(rate))
+                controller.supervisor.filter("fr > %.1f" % float(rate))

@@ -3,9 +3,9 @@
 """Template GUI."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 from operator import itemgetter
@@ -20,24 +20,34 @@ from phylib.utils import Bunch, connect
 
 from phy.cluster.views import ScatterView
 from phy.gui import create_app, run_app
-from ..base import WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin, BaseController
+from ..base import (
+    WaveformMixin,
+    FeatureMixin,
+    TemplateMixin,
+    TraceMixin,
+    BaseController,
+)
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Custom views
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class TemplateFeatureView(ScatterView):
     """Scatter view showing the template features."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Template Controller
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin, BaseController):
+
+class TemplateController(
+    WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin, BaseController
+):
     """Controller for the Template GUI.
 
     Constructor
@@ -58,23 +68,24 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
 
     """
 
-    gui_name = 'TemplateGUI'
+    gui_name = "TemplateGUI"
 
     # Specific views implemented in this class.
-    _new_views = ('TemplateFeatureView',)
+    _new_views = ("TemplateFeatureView",)
 
     # Classes to load by default, in that order. The view refresh follows the same order
     # when the cluster selection changes.
     default_views = (
-        'WaveformView',
-        'CorrelogramView',
-        'ISIView',
-        'FeatureView',
-        'AmplitudeView',
-        'FiringRateView',
-        'TraceView',
-        'ProbeView',
-        'TemplateFeatureView',
+        "WaveformView",
+        "CorrelogramView",
+        "EventPsthView",
+        "ISIView",
+        "FeatureView",
+        "AmplitudeView",
+        "FiringRateView",
+        "TraceView",
+        "ProbeView",
+        "TemplateFeatureView",
     )
 
     # Internal methods
@@ -84,8 +95,8 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
         waveforms_dict = super(TemplateController, self)._get_waveforms_dict()
         # Remove waveforms and mean_waveforms if there is no raw data file.
         if self.model.traces is None and self.model.spike_waveforms is None:
-            waveforms_dict.pop('waveforms', None)
-            waveforms_dict.pop('mean_waveforms', None)
+            waveforms_dict.pop("waveforms", None)
+            waveforms_dict.pop("mean_waveforms", None)
         return waveforms_dict
 
     def _create_model(self, dir_path=None, **kwargs):
@@ -98,7 +109,7 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
 
         @connect(sender=supervisor)
         def on_attach_gui(sender):
-            @supervisor.actions.add(shortcut='shift+ctrl+k', set_busy=True)
+            @supervisor.actions.add(shortcut="shift+ctrl+k", set_busy=True)
             def split_init(cluster_ids=None):
                 """Split a cluster according to the original templates."""
                 if cluster_ids is None:
@@ -108,8 +119,8 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
 
     def _set_similarity_functions(self):
         super(TemplateController, self)._set_similarity_functions()
-        self.similarity_functions['template'] = self.template_similarity
-        self.similarity = 'template'
+        self.similarity_functions["template"] = self.template_similarity
+        self.similarity = "template"
 
     def _get_template_features(self, cluster_ids, load_all=False):
         """Get the template features of a pair of clusters."""
@@ -140,7 +151,7 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
 
     def _set_view_creator(self):
         super(TemplateController, self)._set_view_creator()
-        self.view_creator['TemplateFeatureView'] = self.create_template_feature_view
+        self.view_creator["TemplateFeatureView"] = self.create_template_feature_view
 
     # Public methods
     # -------------------------------------------------------------------------
@@ -156,9 +167,9 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
     def get_channel_amplitudes(self, cluster_id):
         """Return the channel amplitudes of the best channels of a given cluster."""
         template_id = self.get_template_for_cluster(cluster_id)
-        template = self.model.get_template(template_id, amplitude_threshold=.5)
+        template = self.model.get_template(template_id, amplitude_threshold=0.5)
         if not template:  # pragma: no cover
-            return [0], [0.]
+            return [0], [0.0]
         m, M = template.amplitude.min(), template.amplitude.max()
         d = (M - m) if m < M else 1.0
         return template.channel_ids, (template.amplitude - m) / d
@@ -195,23 +206,25 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
         return TemplateFeatureView(coords=self._get_template_features)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Template commands
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def template_gui(params_path, **kwargs):  # pragma: no cover
     """Launch the Template GUI."""
     # Create a `phy.log` log file with DEBUG level.
     p = Path(params_path)
     dir_path = p.parent
-    _add_log_file(dir_path / 'phy.log')
+    _add_log_file(dir_path / "phy.log")
 
     model = load_model(params_path)
     # Automatically export spike waveforms when using compressed raw ephys.
     if model.spike_waveforms is None and isinstance(model.traces, MtscompEphysReader):
         # TODO: customizable values below.
         model.save_spikes_subset_waveforms(
-            max_n_spikes_per_template=500, max_n_channels=16)
+            max_n_spikes_per_template=500, max_n_channels=16
+        )
 
     create_app()
     controller = TemplateController(model=model, dir_path=dir_path, **kwargs)

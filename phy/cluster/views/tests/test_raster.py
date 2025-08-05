@@ -2,9 +2,9 @@
 
 """Test scatter view."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
 
@@ -16,9 +16,10 @@ from ..raster import RasterView
 from . import _stop_and_close
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test scatter view
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_raster_0(qtbot, gui):
     n = 5
@@ -28,6 +29,7 @@ def test_raster_0(qtbot, gui):
 
     class Supervisor(object):
         pass
+
     s = Supervisor()
 
     v = RasterView(spike_times, spike_clusters)
@@ -58,16 +60,26 @@ def test_raster_0(qtbot, gui):
     def on_select_more(sender, cluster_ids):
         _clicked.append(cluster_ids)
 
-    mouse_click(qtbot, v.canvas, pos=(w / 2, 0.), button='Left', modifiers=('Control',))
+    mouse_click(
+        qtbot, v.canvas, pos=(w / 2, 0.0), button="Left", modifiers=("Control",)
+    )
     assert len(_clicked) == 1
     assert _clicked == [[0]]
 
     mouse_click(
-        qtbot, v.canvas, pos=(w / 2, h / 2), button='Left', modifiers=('Control', 'Shift',))
+        qtbot,
+        v.canvas,
+        pos=(w / 2, h / 2),
+        button="Left",
+        modifiers=(
+            "Control",
+            "Shift",
+        ),
+    )
     assert len(_clicked) == 2
     assert _clicked[1][0] in (1, 2)
 
-    v.zoom_to_time_range((1., 3.))
+    v.zoom_to_time_range((1.0, 3.0))
 
     _stop_and_close(qtbot, v)
 
@@ -75,21 +87,28 @@ def test_raster_0(qtbot, gui):
 def test_raster_1(qtbot, gui):
     ns = 10000
     nc = 100
-    spike_times = artificial_spike_samples(ns) / 20000.
+    spike_times = artificial_spike_samples(ns) / 20000.0
     spike_clusters = artificial_spike_clusters(ns, nc)
     cluster_ids = np.arange(4)
 
     v = RasterView(spike_times, spike_clusters)
 
     @v.add_color_scheme(
-        name='group', cluster_ids=cluster_ids,
-        colormap='cluster_group', categorical=True)
+        name="group",
+        cluster_ids=cluster_ids,
+        colormap="cluster_group",
+        categorical=True,
+    )
     def cg(cluster_id):
         return cluster_id % 4
 
     v.add_color_scheme(
-        lambda cid: cid, name='random', cluster_ids=cluster_ids,
-        colormap='categorical', categorical=True)
+        lambda cid: cid,
+        name="random",
+        cluster_ids=cluster_ids,
+        colormap="categorical",
+        categorical=True,
+    )
 
     v.show()
     qtbot.waitForWindowShown(v.canvas)

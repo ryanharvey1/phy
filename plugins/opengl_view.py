@@ -41,7 +41,7 @@ class MyOpenGLView(ManualClusteringView):
         But initially, we just use 1 subplot.
 
         """
-        self.canvas.set_layout('stacked', n_plots=1)
+        self.canvas.set_layout("stacked", n_plots=1)
 
         self.templates = templates
 
@@ -108,7 +108,9 @@ class MyOpenGLView(ManualClusteringView):
         """
         We obtain the template data.
         """
-        bunchs = {cluster_id: self.templates(cluster_id).data for cluster_id in cluster_ids}
+        bunchs = {
+            cluster_id: self.templates(cluster_id).data for cluster_id in cluster_ids
+        }
 
         """
         For performance reasons, it is best to use as few visuals as possible. In this example,
@@ -149,7 +151,7 @@ class MyOpenGLView(ManualClusteringView):
             We decide to use, on the x axis, values ranging from -1 to 1. This is the
             standard viewport in OpenGL and phy.
             """
-            x = np.linspace(-1., 1., len(y))
+            x = np.linspace(-1.0, 1.0, len(y))
 
             """
             phy requires you to specify explicitly the x and y range of the plots.
@@ -181,7 +183,8 @@ class MyOpenGLView(ManualClusteringView):
             top to bottom. Note that in the grid view, the box index is a pair (row, col).
             """
             self.visual.add_batch_data(
-                x=x, y=y, color=color, data_bounds=data_bounds, box_index=idx)
+                x=x, y=y, color=color, data_bounds=data_bounds, box_index=idx
+            )
 
         """
         After the loop, this special call automatically builds the data to upload to the GPU
@@ -200,7 +203,7 @@ class ExampleOpenGLViewPlugin(IPlugin):
         def create_my_view():
             return MyOpenGLView(templates=controller._get_template_waveforms)
 
-        controller.view_creator['MyOpenGLView'] = create_my_view
+        controller.view_creator["MyOpenGLView"] = create_my_view
 
         # Open a view if there is not already one.
-        controller.at_least_one_view('MyOpenGLView')
+        controller.at_least_one_view("MyOpenGLView")

@@ -43,4 +43,4 @@ class ExampleMatplotlibViewPlugin(IPlugin):
             """A function that creates and returns a view."""
             return FeatureDensityView(features=controller._get_features)
 
-        controller.view_creator['FeatureDensityView'] = create_feature_density_view
+        controller.view_creator["FeatureDensityView"] = create_feature_density_view

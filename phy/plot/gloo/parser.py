@@ -12,11 +12,11 @@ log = logging.getLogger(__name__)
 
 
 def _find(filename):
-    return Path(__file__).parent.parent / 'glsl' / filename
+    return Path(__file__).parent.parent / "glsl" / filename
 
 
 def remove_comments(code):
-    """ Remove C-style comment from GLSL code string """
+    """Remove C-style comment from GLSL code string"""
 
     pattern = r"(\".*?\"|\'.*?\')|(/\*.*?\*/|//[^\r\n]*\n)"
     # first group captures quoted strings (double or single)
@@ -35,15 +35,15 @@ def remove_comments(code):
 
 
 def remove_version(code):
-    """ Remove any version directive """
+    """Remove any version directive"""
 
-    pattern = r'\#\s*version[^\r\n]*\n'
+    pattern = r"\#\s*version[^\r\n]*\n"
     regex = re.compile(pattern, re.MULTILINE | re.DOTALL)
-    return regex.sub('\n', code)
+    return regex.sub("\n", code)
 
 
 def merge_includes(code):
-    """ Merge all includes recursively """
+    """Merge all includes recursively"""
 
     # pattern = '\#\s*include\s*"(?P<filename>[a-zA-Z0-9\-\.\/]+)"[^\r\n]*\n'
     pattern = r'\#\s*include\s*"(?P<filename>[a-zA-Z0-9\-\.\/]+)"'
@@ -64,7 +64,7 @@ def merge_includes(code):
                 text += remove_comments(f.read())
             text += '// --- end of "%s" ---\n' % filename
             return text
-        return ''
+        return ""
 
     # Limit recursion to depth 10
     for i in range(10):
@@ -77,7 +77,7 @@ def merge_includes(code):
 
 
 def preprocess(code):
-    """ Preprocess a code by removing comments, version and merging includes"""
+    """Preprocess a code by removing comments, version and merging includes"""
 
     if code:
         # code = remove_comments(code)
@@ -87,9 +87,9 @@ def preprocess(code):
 
 
 def get_declarations(code, qualifier=""):
-    """ Extract declarations of type:
+    """Extract declarations of type:
 
-        qualifier type name[,name,...];
+    qualifier type name[,name,...];
     """
 
     if not len(code):
@@ -101,38 +101,47 @@ def get_declarations(code, qualifier=""):
         qualifier = "(" + "|".join([str(q) for q in qualifier]) + ")"
 
     if qualifier != "":
-        re_type = re.compile(r"""
+        re_type = re.compile(
+            r"""
                              %s                               # Variable qualifier
                              \s+(?P<type>\w+)                 # Variable type
                              \s+(?P<names>[\w,\[\]\n =\.$]+); # Variable name(s)
-                             """ % qualifier, re.VERBOSE)
+                             """
+            % qualifier,
+            re.VERBOSE,
+        )
     else:
-        re_type = re.compile(r"""
+        re_type = re.compile(
+            r"""
                              \s*(?P<type>\w+)         # Variable type
                              \s+(?P<names>[\w\[\] ]+) # Variable name(s)
-                             """, re.VERBOSE)
+                             """,
+            re.VERBOSE,
+        )
 
-    re_names = re.compile(r"""
+    re_names = re.compile(
+        r"""
                           (?P<name>\w+)           # Variable name
                           \s*(\[(?P<size>\d+)\])? # Variable size
                           (\s*[^,]+)?
-                          """, re.VERBOSE)
+                          """,
+        re.VERBOSE,
+    )
 
     for match in re.finditer(re_type, code):
-        vtype = match.group('type')
-        names = match.group('names')
+        vtype = match.group("type")
+        names = match.group("names")
         for match in re.finditer(re_names, names):
-            name = match.group('name')
-            size = match.group('size')
+            name = match.group("name")
+            size = match.group("size")
             if size is None:
                 variables.append((name, vtype))
             else:
                 size = int(size)
                 if size == 0:
-                    raise RuntimeError(
-                        "Size of a variable array cannot be zero")
+                    raise RuntimeError("Size of a variable array cannot be zero")
                 for i in range(size):
-                    iname = '%s[%d]' % (name, i)
+                    iname = "%s[%d]" % (name, i)
                     variables.append((iname, vtype))
     return variables
 
@@ -142,11 +151,14 @@ def get_hooks(code):
         return []
 
     hooks = []
-    re_hooks = re.compile(r"""\<(?P<hook>\w+)
+    re_hooks = re.compile(
+        r"""\<(?P<hook>\w+)
                               (\.(?P<subhook>.+))?
-                              (\([^<>]+\))?\>""", re.VERBOSE)
+                              (\([^<>]+\))?\>""",
+        re.VERBOSE,
+    )
     for match in re.finditer(re_hooks, code):
-        hooks.append((match.group('hook'), None))
+        hooks.append((match.group("hook"), None))
     return list(set(hooks))
 
 
@@ -184,25 +196,29 @@ def get_functions(code):
         return r"[^{}]*?(?:{" * n + r"[^{}]*?" + r"}[^{}]*?)*?" * n
 
     functions = []
-    regex = re.compile(r"""
+    regex = re.compile(
+        r"""
                        \s*(?P<type>\w+)    # Function return type
                        \s+(?P<name>[\w]+)   # Function name
                        \s*\((?P<args>.*?)\) # Function arguments
                        \s*\{(?P<code>%s)\} # Function content
-                       """ % brace_matcher(5), re.VERBOSE | re.DOTALL)
+                       """
+        % brace_matcher(5),
+        re.VERBOSE | re.DOTALL,
+    )
 
     for match in re.finditer(regex, code):
-        rtype = match.group('type')
-        name = match.group('name')
-        args = match.group('args')
-        fcode = match.group('code')
+        rtype = match.group("type")
+        name = match.group("name")
+        args = match.group("args")
+        fcode = match.group("code")
         if name not in ("if", "while"):
             functions.append((rtype, name, args, fcode))
     return functions
 
 
 def parse(code):
-    """ Parse a shader """
+    """Parse a shader"""
 
     code = preprocess(code)
     externs = get_externs(code) if code else []
@@ -213,10 +229,12 @@ def parse(code):
     hooks = get_hooks(code) if code else []
     functions = get_functions(code) if code else []
 
-    return {'externs': externs,
-            'consts': consts,
-            'uniforms': uniforms,
-            'attributes': attributes,
-            'varyings': varyings,
-            'hooks': hooks,
-            'functions': functions}
+    return {
+        "externs": externs,
+        "consts": consts,
+        "uniforms": uniforms,
+        "attributes": attributes,
+        "varyings": varyings,
+        "hooks": hooks,
+        "functions": functions,
+    }

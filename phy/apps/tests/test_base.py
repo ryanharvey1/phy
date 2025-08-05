@@ -2,9 +2,9 @@
 
 """Integration tests for the GUIs."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 from itertools import cycle, islice
 import logging
@@ -18,26 +18,40 @@ import numpy as np
 from pytestqt.plugin import QtBot
 
 from phylib.io.mock import (
-    artificial_features, artificial_traces, artificial_spike_clusters, artificial_spike_samples,
-    artificial_waveforms
+    artificial_features,
+    artificial_traces,
+    artificial_spike_clusters,
+    artificial_spike_samples,
+    artificial_waveforms,
 )
 
 from phylib.utils import connect, unconnect, Bunch, reset, emit
 
 from phy.cluster.views import (
-    WaveformView, FeatureView, AmplitudeView, TraceView, TemplateView,
+    WaveformView,
+    FeatureView,
+    AmplitudeView,
+    TraceView,
+    TemplateView,
 )
 from phy.gui.qt import Debouncer, create_app
 from phy.gui.widgets import Barrier
 from phy.plot.tests import mouse_click
-from ..base import BaseController, WaveformMixin, FeatureMixin, TraceMixin, TemplateMixin
+from ..base import (
+    BaseController,
+    WaveformMixin,
+    FeatureMixin,
+    TraceMixin,
+    TemplateMixin,
+)
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Mock models and controller classes
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class MyModel(object):
     seed = np.random.seed(0)
@@ -51,10 +65,10 @@ class MyModel(object):
     channel_mapping = np.arange(0, n_channels)
     channel_shanks = np.zeros(n_channels, dtype=np.int32)
     features = artificial_features(n_spikes, n_channels, n_pcs)
-    metadata = {'group': {3: 'noise', 4: 'mua', 5: 'good'}}
+    metadata = {"group": {3: "noise", 4: "mua", 5: "good"}}
     sample_rate = 10000
     spike_attributes = {}
-    amplitudes = np.random.normal(size=n_spikes, loc=1, scale=.1)
+    amplitudes = np.random.normal(size=n_spikes, loc=1, scale=0.1)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
     spike_templates = spike_clusters
     spike_samples = artificial_spike_samples(n_spikes)
@@ -72,13 +86,16 @@ class MyModel(object):
 
     def get_waveforms(self, spike_ids, channel_ids):
         n_channels = len(channel_ids) if channel_ids else self.n_channels
-        return artificial_waveforms(len(spike_ids), self.n_samples_waveforms, n_channels)
+        return artificial_waveforms(
+            len(spike_ids), self.n_samples_waveforms, n_channels
+        )
 
     def get_template(self, template_id):
         nc = self.n_channels // 2
         return Bunch(
             template=artificial_waveforms(1, self.n_samples_waveforms, nc)[0, ...],
-            channel_ids=self._get_some_channels(template_id, nc))
+            channel_ids=self._get_some_channels(template_id, nc),
+        )
 
     def save_spike_clusters(self, spike_clusters):
         pass
@@ -99,51 +116,62 @@ class MyController(BaseController):
 
 class MyControllerW(WaveformMixin, MyController):
     """With waveform view."""
+
     pass
 
 
 class MyControllerF(FeatureMixin, MyController):
     """With feature view."""
+
     pass
 
 
 class MyControllerT(TraceMixin, MyController):
     """With trace view."""
+
     pass
 
 
 class MyControllerTmp(TemplateMixin, MyController):
     """With templates."""
+
     pass
 
 
-class MyControllerFull(TemplateMixin, WaveformMixin, FeatureMixin, TraceMixin, MyController):
+class MyControllerFull(
+    TemplateMixin, WaveformMixin, FeatureMixin, TraceMixin, MyController
+):
     """With everything."""
+
     pass
 
 
 def _mock_controller(tempdir, cls):
     model = MyModel()
     return cls(
-        dir_path=tempdir, config_dir=tempdir / 'config', model=model,
-        clear_cache=True, enable_threading=False)
+        dir_path=tempdir,
+        config_dir=tempdir / "config",
+        model=model,
+        clear_cache=True,
+        enable_threading=False,
+    )
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Base classes
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class MinimalControllerTests(object):
-
     # Methods to override
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     @classmethod
     def get_controller(cls, tempdir):
         raise NotImplementedError()
 
     # Convenient properties
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     @property
     def qtbot(self):
@@ -186,7 +214,7 @@ class MinimalControllerTests(object):
         return self.gui.list_views(AmplitudeView)[0]
 
     # Convenience methods
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     def stop(self):  # pragma: no cover
         """Used for debugging."""
@@ -230,20 +258,20 @@ class MinimalControllerTests(object):
 
     def move(self, w):
         s = self.supervisor
-        getattr(s.actions, 'move_%s' % w)()
+        getattr(s.actions, "move_%s" % w)()
         s.block()
 
-    def lasso(self, view, scale=1.):
+    def lasso(self, view, scale=1.0):
         w, h = view.canvas.get_size()
         w *= scale
         h *= scale
-        mouse_click(self.qtbot, view.canvas, (1, 1), modifiers=('Control',))
-        mouse_click(self.qtbot, view.canvas, (w - 1, 1), modifiers=('Control',))
-        mouse_click(self.qtbot, view.canvas, (w - 1, h - 1), modifiers=('Control',))
-        mouse_click(self.qtbot, view.canvas, (1, h - 1), modifiers=('Control',))
+        mouse_click(self.qtbot, view.canvas, (1, 1), modifiers=("Control",))
+        mouse_click(self.qtbot, view.canvas, (w - 1, 1), modifiers=("Control",))
+        mouse_click(self.qtbot, view.canvas, (w - 1, h - 1), modifiers=("Control",))
+        mouse_click(self.qtbot, view.canvas, (1, h - 1), modifiers=("Control",))
 
     # Fixtures
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     @classmethod
     def setUpClass(cls):
@@ -256,7 +284,7 @@ class MinimalControllerTests(object):
 
     @classmethod
     def tearDownClass(cls):
-        if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
+        if os.environ.get("PHY_TEST_STOP", None):  # pragma: no cover
             cls._qtbot.stop()
         cls._close_gui()
         shutil.rmtree(cls._tempdir_)
@@ -266,8 +294,8 @@ class MinimalControllerTests(object):
         cls._gui = cls._controller.create_gui(do_prompt_save=False)
         s = cls._controller.supervisor
         b = Barrier()
-        connect(b('cluster_view'), event='ready', sender=s.cluster_view)
-        connect(b('similarity_view'), event='ready', sender=s.similarity_view)
+        connect(b("cluster_view"), event="ready", sender=s.cluster_view)
+        connect(b("similarity_view"), event="ready", sender=s.similarity_view)
         cls._gui.show()
         # cls._qtbot.addWidget(cls._gui)
         cls._qtbot.waitForWindowShown(cls._gui)
@@ -284,9 +312,8 @@ class MinimalControllerTests(object):
 
 
 class BaseControllerTests(MinimalControllerTests):
-
     # Common test methods
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     def test_common_01(self):
         """Select one cluster."""
@@ -324,12 +351,12 @@ class BaseControllerTests(MinimalControllerTests):
 
     def test_common_07(self):
         """Move action."""
-        self.move('similar_to_noise')
+        self.move("similar_to_noise")
         self.assertEqual(len(self.selected), 2)
 
     def test_common_08(self):
         """Move action."""
-        self.move('best_to_good')
+        self.move("best_to_good")
         self.assertEqual(len(self.selected), 1)
 
     def test_common_09(self):
@@ -339,9 +366,9 @@ class BaseControllerTests(MinimalControllerTests):
         @connect(sender=self.supervisor)
         def on_cluster(sender, up):
             cls = self.__class__
-            cls._label_name, cls._label_value = 'new_label', up.metadata_value
+            cls._label_name, cls._label_value = "new_label", up.metadata_value
 
-        self.label('new_label', 3)
+        self.label("new_label", 3)
 
         unconnect(on_cluster)
 
@@ -359,16 +386,17 @@ class GlobalViewsTests(object):
     def test_global_filter_1(self):
         self.next()
         cv = self.supervisor.cluster_view
-        emit('table_filter', cv, self.cluster_ids[::2])
+        emit("table_filter", cv, self.cluster_ids[::2])
 
     def test_global_sort_1(self):
         cv = self.supervisor.cluster_view
-        emit('table_sort', cv, self.cluster_ids[::-1])
+        emit("table_sort", cv, self.cluster_ids[::-1])
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Mock test cases
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class MockControllerTests(MinimalControllerTests, GlobalViewsTests, unittest.TestCase):
     """Empty mock controller."""
@@ -378,11 +406,11 @@ class MockControllerTests(MinimalControllerTests, GlobalViewsTests, unittest.Tes
         return _mock_controller(tempdir, MyController)
 
     def test_create_ipython_view(self):
-        self.gui.create_and_add_view('IPythonView')
+        self.gui.create_and_add_view("IPythonView")
 
     def test_create_raster_view(self):
-        view = self.gui.create_and_add_view('RasterView')
-        mouse_click(self.qtbot, view.canvas, (10, 10), modifiers=('Control',))
+        view = self.gui.create_and_add_view("RasterView")
+        mouse_click(self.qtbot, view.canvas, (10, 10), modifiers=("Control",))
         view.actions.next_color_scheme()
 
 
@@ -404,17 +432,21 @@ class MockControllerWTests(MinimalControllerTests, unittest.TestCase):
 
     def test_mean_amplitudes(self):
         self.next()
-        self.assertTrue(self.controller.get_mean_spike_raw_amplitudes(self.selected[0]) >= 0)
+        self.assertTrue(
+            self.controller.get_mean_spike_raw_amplitudes(self.selected[0]) >= 0
+        )
 
     def test_waveform_select_channel(self):
-        self.amplitude_view.amplitudes_type = 'raw'
+        self.amplitude_view.amplitudes_type = "raw"
 
         fv = self.waveform_view
         # Select channel in waveform view.
         w, h = fv.canvas.get_size()
         w, h = w / 2, h / 2
         x, y = w / 2, h / 2
-        mouse_click(self.qtbot, fv.canvas, (x, y), button='Left', modifiers=('Control',))
+        mouse_click(
+            self.qtbot, fv.canvas, (x, y), button="Left", modifiers=("Control",)
+        )
 
 
 class MockControllerFTests(MinimalControllerTests, unittest.TestCase):
@@ -431,7 +463,7 @@ class MockControllerFTests(MinimalControllerTests, unittest.TestCase):
     def test_feature_view_split(self):
         self.next()
         n = max(self.cluster_ids)
-        self.lasso(self.feature_view, .1)
+        self.lasso(self.feature_view, 0.1)
         self.split()
         # Split one cluster => Two new clusters should be selected after the split.
         self.assertEqual(self.selected[:2], [n + 1, n + 2])
@@ -447,7 +479,7 @@ class MockControllerFTests(MinimalControllerTests, unittest.TestCase):
         w, h = fv.canvas.get_size()
         w, h = w / 4, h / 4
         x, y = w / 2, h / 2
-        mouse_click(self.qtbot, fv.canvas, (x, y), button='Right', modifiers=('Alt',))
+        mouse_click(self.qtbot, fv.canvas, (x, y), button="Right", modifiers=("Alt",))
 
 
 class MockControllerTTests(GlobalViewsTests, MinimalControllerTests, unittest.TestCase):
@@ -465,9 +497,13 @@ class MockControllerTTests(GlobalViewsTests, MinimalControllerTests, unittest.Te
         self.trace_view.actions.go_to_next_spike()
         self.trace_view.actions.go_to_previous_spike()
         self.trace_view.actions.toggle_highlighted_spikes(True)
-        mouse_click(self.qtbot, self.trace_view.canvas, (100, 100), modifiers=('Control',))
-        mouse_click(self.qtbot, self.trace_view.canvas, (150, 100), modifiers=('Shift',))
-        emit('select_time', self, 0)
+        mouse_click(
+            self.qtbot, self.trace_view.canvas, (100, 100), modifiers=("Control",)
+        )
+        mouse_click(
+            self.qtbot, self.trace_view.canvas, (150, 100), modifiers=("Shift",)
+        )
+        emit("select_time", self, 0)
         self.trace_view.actions.next_color_scheme()
 
 
@@ -483,16 +519,22 @@ class MockControllerTmpTests(MinimalControllerTests, unittest.TestCase):
         return self.gui.list_views(TemplateView)[0]
 
     def test_template_view_select(self):
-        mouse_click(self.qtbot, self.template_view.canvas, (100, 100), modifiers=('Control',))
-        mouse_click(self.qtbot, self.template_view.canvas, (150, 100), modifiers=('Shift',))
+        mouse_click(
+            self.qtbot, self.template_view.canvas, (100, 100), modifiers=("Control",)
+        )
+        mouse_click(
+            self.qtbot, self.template_view.canvas, (150, 100), modifiers=("Shift",)
+        )
 
     def test_mean_amplitudes(self):
         self.next()
-        self.assertTrue(self.controller.get_mean_spike_template_amplitudes(self.selected[0]) >= 0)
+        self.assertTrue(
+            self.controller.get_mean_spike_template_amplitudes(self.selected[0]) >= 0
+        )
 
     def test_split_template_amplitude(self):
         self.next()
-        self.amplitude_view.amplitudes_type = 'template'
+        self.amplitude_view.amplitudes_type = "template"
         self.controller.get_amplitudes(self.selected[0], load_all=True)
         self.amplitude_view.plot()
         self.lasso(self.amplitude_view)
@@ -501,6 +543,7 @@ class MockControllerTmpTests(MinimalControllerTests, unittest.TestCase):
 
 class MockControllerFullTests(MinimalControllerTests, unittest.TestCase):
     """Mock controller with all views."""
+
     @classmethod
     def get_controller(cls, tempdir):
         return _mock_controller(tempdir, MyControllerFull)
@@ -520,8 +563,8 @@ class MockControllerFullTests(MinimalControllerTests, unittest.TestCase):
         self.gui.view_actions.switch_raw_data_filter()
         self.gui.view_actions.switch_raw_data_filter()
 
-        rdf.set('diff')
-        assert rdf.current == 'diff'
+        rdf.set("diff")
+        assert rdf.current == "diff"
 
     def test_y1_close_view(self):
         s = self.selected

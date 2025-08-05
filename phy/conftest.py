@@ -2,9 +2,9 @@
 
 """py.test utilities."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 import numpy as np
@@ -16,11 +16,11 @@ from phylib import add_default_handler
 from phylib.conftest import *  # noqa
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Common fixtures
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-logger = logging.getLogger('phy')
+logger = logging.getLogger("phy")
 logger.setLevel(10)
 add_default_handler(5, logger=logger)
 
@@ -34,12 +34,14 @@ np.random.seed(2019)
 
 def pytest_addoption(parser):
     """Repeat option."""
-    parser.addoption('--repeat', action='store', help='Number of times to repeat each test')
+    parser.addoption(
+        "--repeat", action="store", help="Number of times to repeat each test"
+    )
 
 
 def pytest_generate_tests(metafunc):  # pragma: no cover
     # Use --repeat option.
     if metafunc.config.option.repeat is not None:
         count = int(metafunc.config.option.repeat)
-        metafunc.fixturenames.append('tmp_ct')
-        metafunc.parametrize('tmp_ct', range(count))
+        metafunc.fixturenames.append("tmp_ct")
+        metafunc.parametrize("tmp_ct", range(count))

@@ -2,9 +2,9 @@
 
 """Testing the Kwik GUI."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 from pathlib import Path
@@ -23,21 +23,25 @@ logger = logging.getLogger(__name__)
 
 
 def _kwik_controller(tempdir, kwik_only=False):
-    paths = ['kwik/hybrid_10sec.kwik']
+    paths = ["kwik/hybrid_10sec.kwik"]
     if not kwik_only:
-        paths += ['kwik/hybrid_10sec.kwx', 'kwik/hybrid_10sec.dat']
+        paths += ["kwik/hybrid_10sec.kwx", "kwik/hybrid_10sec.dat"]
     for path in paths:
         loc_path = Path(download_test_file(path))
         # Copy the dataset to a temporary directory.
         shutil.copy(loc_path, tempdir / loc_path.name)
-    kwik_path = tempdir / 'hybrid_10sec.kwik'
+    kwik_path = tempdir / "hybrid_10sec.kwik"
     return KwikController(
-        kwik_path, channel_group=0, config_dir=tempdir / 'config',
-        clear_cache=True, enable_threading=False)
+        kwik_path,
+        channel_group=0,
+        config_dir=tempdir / "config",
+        clear_cache=True,
+        enable_threading=False,
+    )
 
 
 def test_kwik_describe(qtbot, tempdir):
-    temp_path = download_test_file('kwik/hybrid_10sec.kwik')
+    temp_path = download_test_file("kwik/hybrid_10sec.kwik")
     kwik_path = tempdir / temp_path.name
     shutil.copy(temp_path, kwik_path)
     with captured_output() as (stdout, stderr):
@@ -61,19 +65,19 @@ class KwikControllerTests(BaseControllerTests, unittest.TestCase):
         return views[0] if views else None
 
     def test_kwik_snippets(self):
-        self.key('Down')
-        self.key('Space')
-        self.key('G')
-        self.key('Space')
-        self.key('G', modifiers=('Alt',))
-        self.key('Z')
-        self.key('N', modifiers=('Alt',))
-        self.key('Space')
+        self.key("Down")
+        self.key("Space")
+        self.key("G")
+        self.key("Space")
+        self.key("G", modifiers=("Alt",))
+        self.key("Z")
+        self.key("N", modifiers=("Alt",))
+        self.key("Space")
         # Recluster.
-        self.key('Colon', delay=10)
-        for char in 'RECLUSTER':
+        self.key("Colon", delay=10)
+        for char in "RECLUSTER":
             self.key(char, delay=10)
-        self.key('Enter')
+        self.key("Enter")
 
     def test_kwik_waveform_view(self):
         if not self.waveform_view:

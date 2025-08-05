@@ -13,7 +13,7 @@ def my_grid():
     0B,1B 1B,2B 2B,0B
     0C,1C 1C,2C 2C,0C
     """.strip()
-    return [[_ for _ in re.split(' +', line.strip())] for line in s.splitlines()]
+    return [[_ for _ in re.split(" +", line.strip())] for line in s.splitlines()]
 
 
 class ExampleCustomFeatureViewPlugin(IPlugin):

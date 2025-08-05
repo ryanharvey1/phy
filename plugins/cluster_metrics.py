@@ -18,4 +18,4 @@ class ExampleClusterMetricsPlugin(IPlugin):
         # We memcache the function so that cluster metrics are only computed once and saved
         # within the session, and also between sessions (the memcached values are also saved
         # on disk).
-        controller.cluster_metrics['meanisi'] = controller.context.memcache(meanisi)
+        controller.cluster_metrics["meanisi"] = controller.context.memcache(meanisi)

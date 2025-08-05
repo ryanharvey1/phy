@@ -2,8 +2,7 @@
 # Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
 # Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
-"""
-"""
+""" """
 
 from functools import reduce
 from operator import mul
@@ -39,10 +38,10 @@ def dtype_reduce(dtype, level=0, depth=0):
             name = str(dtype.subdtype[0])
         else:
             name = str(dtype)
-        return ['', count, name]
+        return ["", count, name]
     else:
         items = []
-        name = ''
+        name = ""
         # Get reduced fields
         for key, value in fields.items():
             l = dtype_reduce(value[0], level, depth + 1)
@@ -50,7 +49,7 @@ def dtype_reduce(dtype, level=0, depth=0):
                 items.append([key, l[1], l[2]])
             else:
                 items.append(l)
-            name += key + ','
+            name += key + ","
 
         # Check if we can reduce item list
         ctype = None
@@ -93,14 +92,13 @@ class Uniforms(Texture2D):
     """
 
     def __init__(self, size, dtype):
-        """ Initialization """
+        """Initialization"""
 
         # Check dtype is made of float32 only
         dtype = eval(str(np.dtype(dtype)))
         rtype = dtype_reduce(dtype)
-        if type(rtype[0]) is not str or rtype[2] != 'float32':
-            raise RuntimeError(
-                "Uniform type cannot be reduced to float32 only")
+        if type(rtype[0]) is not str or rtype[2] != "float32":
+            raise RuntimeError("Uniform type cannot be reduced to float32 only")
 
         # True dtype (the one given in args)
         self._original_dtype = np.dtype(dtype)
@@ -113,7 +111,7 @@ class Uniforms(Texture2D):
         if rtype[1] % 4:
             count += 4
         if (count - rtype[1]) > 0:
-            dtype.append(('unused', '<f4', count - rtype[1]))
+            dtype.append(("unused", "<f4", count - rtype[1]))
 
         # Complete dtype, multiple of 4 floats
         self._complete_dtype = dtype
@@ -131,14 +129,15 @@ class Uniforms(Texture2D):
         if size % cols:
             rows += 1
 
-        Texture2D.__init__(self, shape=(rows, cols, 4), dtype=np.float32,
-                           resizeable=False, store=True)
+        Texture2D.__init__(
+            self, shape=(rows, cols, 4), dtype=np.float32, resizeable=False, store=True
+        )
         data = self._data.ravel()
         self._typed_data = data.view(self._complete_dtype)
         self._size = size
 
     def __setitem__(self, key, value):
-        """ x.__getitem__(y) <==> x[y] """
+        """x.__getitem__(y) <==> x[y]"""
 
         if self.base is not None and not self._valid:
             raise ValueError("This uniforms view has been invalited")
@@ -181,7 +180,7 @@ class Uniforms(Texture2D):
             stop = stop[0], self.shape[1] - 1
 
         offset = start[0], start[1], 0
-        data = self._data[start[0]:stop[0] + 1, start[1]:stop[1]]
+        data = self._data[start[0] : stop[0] + 1, start[1] : stop[1]]
         self.set_data(data=data, offset=offset, copy=False)
 
     def code(self, prefix="u_"):
@@ -196,8 +195,14 @@ class Uniforms(Texture2D):
         header = """uniform sampler2D u_uniforms;\n"""
 
         # Header generation (easy)
-        types = {1: 'float', 2: 'vec2 ', 3: 'vec3 ',
-                 4: 'vec4 ', 9: 'mat3 ', 16: 'mat4 '}
+        types = {
+            1: "float",
+            2: "vec2 ",
+            3: "vec3 ",
+            4: "vec4 ",
+            9: "mat3 ",
+            16: "mat4 ",
+        }
         for name, count, _ in _dtype:
             header += "varying %s %s%s;\n" % (types[count], prefix, name)
 
@@ -246,8 +251,7 @@ class Uniforms(Texture2D):
                     b = "w"
 
                 i = min(min(len(b), count), len(a))
-                body += "    %s%s.%s = _uniforms.%s;\n" % (
-                    prefix, name, b[:i], a[:i])
+                body += "    %s%s.%s = _uniforms.%s;\n" % (prefix, name, b[:i], a[:i])
                 count -= i
                 shift += i
                 store -= i

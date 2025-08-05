@@ -7,11 +7,13 @@ from phy.cluster.views import ScatterView
 def umap(x):
     """Perform the dimension reduction of the array x."""
     from umap import UMAP
+
     return UMAP().fit_transform(x)
 
 
 class WaveformUMAPView(ScatterView):
     """Every view corresponds to a unique view class, so we need to subclass ScatterView."""
+
     pass
 
 
@@ -36,7 +38,9 @@ class ExampleWaveformUMAPPlugin(IPlugin):
             data = controller.model.get_waveforms(spike_ids, None)
             # We reshape the array as a 2D array so that we can pass it to the t-SNE algorithm.
             (n_spikes, n_samples, n_channels) = data.shape
-            data = data.transpose((0, 2, 1))  # get an (n_spikes, n_channels, n_samples) array
+            data = data.transpose(
+                (0, 2, 1)
+            )  # get an (n_spikes, n_channels, n_samples) array
             data = data.reshape((n_spikes, n_samples * n_channels))
             # We perform the dimension reduction.
             pos = umap(data)
@@ -48,4 +52,4 @@ class ExampleWaveformUMAPPlugin(IPlugin):
 
         # Maps a view name to a function that returns a view
         # when called with no argument.
-        controller.view_creator['WaveformUMAPView'] = create_view
+        controller.view_creator["WaveformUMAPView"] = create_view

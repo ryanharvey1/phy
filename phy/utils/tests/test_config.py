@@ -2,9 +2,9 @@
 
 """Test config."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 from textwrap import dedent
@@ -15,18 +15,20 @@ from traitlets.config import Configurable
 
 from .. import config as _config
 from phylib.utils._misc import write_text
-from ..config import (ensure_dir_exists,
-                      load_config,
-                      load_master_config,
-                      save_config,
-                      )
+from ..config import (
+    ensure_dir_exists,
+    load_config,
+    load_master_config,
+    save_config,
+)
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test logging
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_logging():
     logger.debug("Debug message")
@@ -35,16 +37,17 @@ def test_logging():
     logger.error("Error message")
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test config
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_phy_config_dir():
-    assert str(_config.phy_config_dir()).endswith('.phy')
+    assert str(_config.phy_config_dir()).endswith(".phy")
 
 
 def test_ensure_dir_exists(tempdir):
-    path = tempdir / 'a/b/c'
+    path = tempdir / "a/b/c"
     ensure_dir_exists(path)
     assert path.is_dir()
 
@@ -53,9 +56,10 @@ def test_temp_config_dir(temp_config_dir):
     assert _config.phy_config_dir() == temp_config_dir
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Config tests
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 @fixture
 def py_config(tempdir):
@@ -64,7 +68,7 @@ def py_config(tempdir):
        c = get_config()
        c.MyConfigurable.my_var = 1.0
        """
-    path = tempdir / 'config.py'
+    path = tempdir / "config.py"
     write_text(path, config_contents)
     return path
 
@@ -79,21 +83,20 @@ def json_config(tempdir):
             }
         }
     """
-    path = tempdir / 'config.json'
+    path = tempdir / "config.json"
     write_text(path, config_contents)
     return path
 
 
-@fixture(params=['python', 'json'])
+@fixture(params=["python", "json"])
 def config(py_config, json_config, request):
-    if request.param == 'python':
+    if request.param == "python":
         yield py_config
-    elif request.param == 'json':
+    elif request.param == "json":
         yield json_config
 
 
 def test_load_config(config):
-
     assert load_config() is not None
 
     class MyConfigurable(Configurable):
@@ -124,17 +127,17 @@ def test_load_master_config_1(temp_config_dir):
        c = get_config()
        c.MyConfigurable.my_var = 1.0
        """)
-    (temp_config_dir / 'phy_config.py').write_text(config_contents)
+    (temp_config_dir / "phy_config.py").write_text(config_contents)
 
     # Load the master config file.
     c = load_master_config()
-    assert c.MyConfigurable.my_var == 1.
+    assert c.MyConfigurable.my_var == 1.0
 
 
 def test_save_config(tempdir):
-    c = {'A': {'b': 3.}}
-    path = tempdir / 'config.json'
+    c = {"A": {"b": 3.0}}
+    path = tempdir / "config.json"
     save_config(path, c)
 
     c1 = load_config(path)
-    assert c1.A.b == 3.
+    assert c1.A.b == 3.0

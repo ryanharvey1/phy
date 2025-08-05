@@ -3,9 +3,9 @@
 """Test layout."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 from itertools import product
 
@@ -21,9 +21,9 @@ from ..visuals import ScatterVisual
 from . import mouse_click
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Fixtures
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 N = 10000
 
@@ -44,13 +44,13 @@ class MyTestVisual(BaseVisual):
                 gl_FragColor = vec4(1, 1, 1, 1);
             }
         """
-        self.set_primitive_type('points')
+        self.set_primitive_type("points")
 
     def set_data(self):
         self.n_vertices = N
         position = np.random.uniform(low=-1, high=+1, size=(N, 2))
         self.data = position
-        self.program['a_position'] = position.astype(np.float32)
+        self.program["a_position"] = position.astype(np.float32)
 
         self.emit_visual_set_data()
 
@@ -71,30 +71,30 @@ def _create_visual(qtbot, canvas, layout, box_index):
     qtbot.waitForWindowShown(c)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test grid
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_grid_layout():
     grid = Grid((4, 8))
-    ac(grid.map([0., 0.], (0, 0)), [[-0.875, 0.75]])
-    ac(grid.map([0., 0.], (1, 3)), [[-0.125, 0.25]])
-    ac(grid.map([0., 0.], (3, 7)), [[0.875, -0.75]])
+    ac(grid.map([0.0, 0.0], (0, 0)), [[-0.875, 0.75]])
+    ac(grid.map([0.0, 0.0], (1, 3)), [[-0.125, 0.25]])
+    ac(grid.map([0.0, 0.0], (3, 7)), [[0.875, -0.75]])
 
-    ac(grid.imap([[0.875, -0.75]], (3, 7)), [[0., 0.]])
+    ac(grid.imap([[0.875, -0.75]], (3, 7)), [[0.0, 0.0]])
 
 
 def test_grid_closest_box():
     grid = Grid((3, 7))
-    ac(grid.get_closest_box((0., 0.)), (1, 3))
-    ac(grid.get_closest_box((-1., +1.)), (0, 0))
-    ac(grid.get_closest_box((+1., -1.)), (2, 6))
-    ac(grid.get_closest_box((-1., -1.)), (2, 0))
-    ac(grid.get_closest_box((+1., +1.)), (0, 6))
+    ac(grid.get_closest_box((0.0, 0.0)), (1, 3))
+    ac(grid.get_closest_box((-1.0, +1.0)), (0, 0))
+    ac(grid.get_closest_box((+1.0, -1.0)), (2, 6))
+    ac(grid.get_closest_box((-1.0, -1.0)), (2, 0))
+    ac(grid.get_closest_box((+1.0, +1.0)), (0, 6))
 
 
 def test_grid_1(qtbot, canvas):
-
     n = N // 10
 
     box_index = [[i, j] for i, j in product(range(2), range(5))]
@@ -109,7 +109,6 @@ def test_grid_1(qtbot, canvas):
 
 
 def test_grid_2(qtbot, canvas):
-
     n = N // 10
 
     box_index = [[i, j] for i, j in product(range(2), range(5))]
@@ -120,21 +119,21 @@ def test_grid_2(qtbot, canvas):
     grid.shape = (5, 2)
     assert grid.shape == (5, 2)
 
-    grid.scaling = (.5, 2)
-    assert grid.scaling == (.5, 2)
+    grid.scaling = (0.5, 2)
+    assert grid.scaling == (0.5, 2)
 
     # qtbot.stop()
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test boxed
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_boxed_1(qtbot, canvas):
-
     n = 10
     b = np.zeros((n, 2))
-    b[:, 1] = np.linspace(-1., 1., n)
+    b[:, 1] = np.linspace(-1.0, 1.0, n)
 
     box_index = np.repeat(np.arange(n), N // n, axis=0)
     assert box_index.shape == (N,)
@@ -147,8 +146,8 @@ def test_boxed_1(qtbot, canvas):
     assert boxed.layout_scaling == (1, 1)
 
     ac(boxed.box_pos[:, 0], 0, atol=1e-9)
-    assert boxed.box_size[0] >= .9
-    assert boxed.box_size[1] >= .05
+    assert boxed.box_size[0] >= 0.9
+    assert boxed.box_size[1] >= 0.05
 
     assert boxed.box_bounds.shape == (n, 4)
 
@@ -169,7 +168,7 @@ def test_boxed_2(qtbot, canvas):
 
     n = 10
     b = np.zeros((n, 2))
-    b[:, 1] = np.linspace(-1., 1., n)
+    b[:, 1] = np.linspace(-1.0, 1.0, n)
 
     box_index = np.repeat(np.arange(n), 2 * (N + 2), axis=0)
 
@@ -180,7 +179,7 @@ def test_boxed_2(qtbot, canvas):
 
     t = np.linspace(-1, 1, N)
     x = np.atleast_2d(t)
-    y = np.atleast_2d(.5 * np.sin(20 * t))
+    y = np.atleast_2d(0.5 * np.sin(20 * t))
 
     x = np.tile(x, (n, 1))
     y = np.tile(y, (n, 1))
@@ -194,47 +193,48 @@ def test_boxed_2(qtbot, canvas):
     qtbot.waitForWindowShown(c)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test stacked
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_stacked_1(qtbot, canvas):
-
     n = 10
     box_index = np.repeat(np.arange(n), N // n, axis=0)
 
-    stacked = Stacked(n_boxes=n, origin='top')
+    stacked = Stacked(n_boxes=n, origin="top")
     _create_visual(qtbot, canvas, stacked, box_index)
 
-    assert stacked.origin == 'top'
+    assert stacked.origin == "top"
 
-    stacked.origin = 'bottom'
-    assert stacked.origin == 'bottom'
+    stacked.origin = "bottom"
+    assert stacked.origin == "bottom"
 
     # qtbot.stop()
 
 
 def test_stacked_closest_box():
-    stacked = Stacked(n_boxes=4, origin='top')
-    ac(stacked.get_closest_box((-.5, .9)), 0)
-    ac(stacked.get_closest_box((+.5, -.9)), 3)
+    stacked = Stacked(n_boxes=4, origin="top")
+    ac(stacked.get_closest_box((-0.5, 0.9)), 0)
+    ac(stacked.get_closest_box((+0.5, -0.9)), 3)
 
-    stacked = Stacked(n_boxes=4, origin='bottom')
-    ac(stacked.get_closest_box((-.5, .9)), 3)
-    ac(stacked.get_closest_box((+.5, -.9)), 0)
+    stacked = Stacked(n_boxes=4, origin="bottom")
+    ac(stacked.get_closest_box((-0.5, 0.9)), 3)
+    ac(stacked.get_closest_box((+0.5, -0.9)), 0)
 
     stacked.n_boxes = 3
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test lasso
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_lasso_simple(qtbot):
     view = BaseCanvas()
 
-    x = .25 * np.random.randn(N)
-    y = .25 * np.random.randn(N)
+    x = 0.25 * np.random.randn(N)
+    y = 0.25 * np.random.randn(N)
 
     scatter = ScatterVisual()
     view.add_visual(scatter)
@@ -245,15 +245,15 @@ def test_lasso_simple(qtbot):
     l.create_lasso_visual()
 
     view.show()
-    #qtbot.waitForWindowShown(view)
+    # qtbot.waitForWindowShown(view)
 
-    l.add((-.5, -.5))
-    l.add((+.5, -.5))
-    l.add((+.5, +.5))
-    l.add((-.5, +.5))
+    l.add((-0.5, -0.5))
+    l.add((+0.5, -0.5))
+    l.add((+0.5, +0.5))
+    l.add((-0.5, +0.5))
     assert l.count == 4
     assert l.polygon.shape == (4, 2)
-    b = [[-.5, -.5], [+.5, -.5], [+.5, +.5], [-.5, +.5]]
+    b = [[-0.5, -0.5], [+0.5, -0.5], [+0.5, +0.5], [-0.5, +0.5]]
     ae(l.in_polygon(b), [False, False, True, True])
     assert str(l)
 
@@ -273,7 +273,7 @@ def test_lasso_grid(qtbot, canvas):
     # Right panel.
     box_index = np.zeros((N, 2), dtype=np.float32)
     box_index[:, 1] = 1
-    visual.program['a_box_index'] = box_index
+    visual.program["a_box_index"] = box_index
     visual.set_data()
 
     # lasso interact
@@ -286,8 +286,10 @@ def test_lasso_grid(qtbot, canvas):
     qtbot.waitForWindowShown(canvas)
     qtbot.wait(20)
 
-    def _ctrl_click(x, y, button='left'):
-        mouse_click(qtbot, canvas, (int(x), int(y)), button=button, modifiers=('Control',))
+    def _ctrl_click(x, y, button="left"):
+        mouse_click(
+            qtbot, canvas, (int(x), int(y)), button=button, modifiers=("Control",)
+        )
 
     # Square selection in the right panel.
     w, h = canvas.get_size()
@@ -303,10 +305,10 @@ def test_lasso_grid(qtbot, canvas):
     assert l.box == (0, 1)
 
     inlasso = l.in_polygon(visual.data)
-    assert .001 < inlasso.mean() < .999
+    assert 0.001 < inlasso.mean() < 0.999
 
     # Clear box.
-    _ctrl_click(x0, y0, 'right')
+    _ctrl_click(x0, y0, "right")
     assert l.polygon.shape == (0, 2)
     assert l.box is None
 

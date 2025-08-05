@@ -2,9 +2,9 @@
 
 """Test colors."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import colorcet as cc
 import numpy as np
@@ -13,14 +13,25 @@ from numpy.testing import assert_almost_equal as ae
 from pytest import raises
 
 from ..color import (
-    _is_bright, _random_bright_color, spike_colors, add_alpha, selected_cluster_color,
-    _override_hsv, _hex_to_triplet, _continuous_colormap, _categorical_colormap,
-    _selected_cluster_idx, ClusterColorSelector, _add_selected_clusters_colors)
+    _is_bright,
+    _random_bright_color,
+    spike_colors,
+    add_alpha,
+    selected_cluster_color,
+    _override_hsv,
+    _hex_to_triplet,
+    _continuous_colormap,
+    _categorical_colormap,
+    _selected_cluster_idx,
+    ClusterColorSelector,
+    _add_selected_clusters_colors,
+)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Tests
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_random_color():
     for _ in range(20):
@@ -28,19 +39,19 @@ def test_random_color():
 
 
 def test_hex_to_triplet():
-    assert _hex_to_triplet('#0123ab')
+    assert _hex_to_triplet("#0123ab")
 
 
 def test_add_alpha():
-    assert add_alpha((0, .5, 1), .75) == (0, .5, 1, .75)
-    assert add_alpha(np.random.rand(5, 3), .5).shape == (5, 4)
+    assert add_alpha((0, 0.5, 1), 0.75) == (0, 0.5, 1, 0.75)
+    assert add_alpha(np.random.rand(5, 3), 0.5).shape == (5, 4)
 
-    assert add_alpha((0, .5, 1, .1), .75) == (0, .5, 1, .75)
-    assert add_alpha(np.random.rand(5, 4), .5).shape == (5, 4)
+    assert add_alpha((0, 0.5, 1, 0.1), 0.75) == (0, 0.5, 1, 0.75)
+    assert add_alpha(np.random.rand(5, 4), 0.5).shape == (5, 4)
 
 
 def test_override_hsv():
-    assert _override_hsv((.1, .9, .5), h=1, s=0, v=1) == (1, 1, 1)
+    assert _override_hsv((0.1, 0.9, 0.5), h=1, s=0, v=1) == (1, 1, 1)
 
 
 def test_selected_cluster_color():
@@ -71,12 +82,12 @@ def test_spike_colors():
 
 def test_cluster_color_selector_1():
     cluster_ids = [1, 2, 3]
-    c = ClusterColorSelector(lambda cid: cid * .1, cluster_ids=cluster_ids)
+    c = ClusterColorSelector(lambda cid: cid * 0.1, cluster_ids=cluster_ids)
 
-    assert len(c.get(1, alpha=.5)) == 4
+    assert len(c.get(1, alpha=0.5)) == 4
     ae(c.get_values([0, 0]), np.zeros(2))
 
-    for colormap in ('linear', 'rainbow', 'categorical', 'diverging'):
+    for colormap in ("linear", "rainbow", "categorical", "diverging"):
         c.set_color_mapping(colormap=colormap)
         colors = c.get_colors(cluster_ids)
         assert colors.shape == (3, 4)
@@ -85,7 +96,11 @@ def test_cluster_color_selector_1():
 def test_cluster_color_selector_2():
     cluster_ids = [2, 3, 5, 7]
     c = ClusterColorSelector(
-        lambda cid: cid, cluster_ids=cluster_ids, colormap='categorical', categorical=True)
+        lambda cid: cid,
+        cluster_ids=cluster_ids,
+        colormap="categorical",
+        categorical=True,
+    )
 
     c2 = c.get_colors([2])
     c3 = c.get_colors([3])
@@ -107,16 +122,17 @@ def test_cluster_color_group():
     # Mock ClusterMeta instance, with 'fields' property and get(field, cluster) function.
     cluster_ids = [1, 2, 3]
     c = ClusterColorSelector(
-        lambda cl: {1: None, 2: 'mua', 3: 'good'}[cl], cluster_ids=cluster_ids)
+        lambda cl: {1: None, 2: "mua", 3: "good"}[cl], cluster_ids=cluster_ids
+    )
 
-    c.set_color_mapping(colormap='cluster_group')
+    c.set_color_mapping(colormap="cluster_group")
     colors = c.get_colors(cluster_ids)
     assert colors.shape == (3, 4)
 
 
 def test_cluster_color_log():
     cluster_ids = [1, 2, 3]
-    c = ClusterColorSelector(lambda cid: cid * .1, cluster_ids=cluster_ids)
+    c = ClusterColorSelector(lambda cid: cid * 0.1, cluster_ids=cluster_ids)
 
     c.set_color_mapping(logarithmic=True)
     colors = c.get_colors(cluster_ids)
@@ -142,7 +158,8 @@ def test_add_selected_clusters_colors_2():
 
     cluster_colors = np.c_[np.arange(5), np.zeros((5, 3))]
     cluster_colors_sel = _add_selected_clusters_colors(
-        selected_clusters, cluster_ids, cluster_colors)
+        selected_clusters, cluster_ids, cluster_colors
+    )
 
     ae(cluster_colors_sel[[0, 1, 4]], cluster_colors[[0, 1, 4]])
     ae(cluster_colors_sel[2], selected_cluster_color(0))

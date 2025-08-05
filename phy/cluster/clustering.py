@@ -2,9 +2,9 @@
 
 """Clustering structure."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 
@@ -19,9 +19,10 @@ from phylib.utils.event import emit
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Clustering class
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _extend_spikes(spike_ids, spike_clusters):
     """Return all spikes belonging to the clusters containing the specified
@@ -46,7 +47,9 @@ def _concatenate_spike_clusters(*pairs):
     return concat[:, 0].astype(np.int64), concat[:, 1].astype(np.int64)
 
 
-def _extend_assignment(spike_ids, old_spike_clusters, spike_clusters_rel, new_cluster_id):
+def _extend_assignment(
+    spike_ids, old_spike_clusters, spike_clusters_rel, new_cluster_id
+):
     # 1. Add spikes that belong to modified clusters.
     # 2. Find new cluster ids for all changed clusters.
 
@@ -58,7 +61,9 @@ def _extend_assignment(spike_ids, old_spike_clusters, spike_clusters_rel, new_cl
     assert spike_clusters_rel.min() >= 0
 
     # We renumber the new cluster indices.
-    new_spike_clusters = (spike_clusters_rel + (new_cluster_id - spike_clusters_rel.min()))
+    new_spike_clusters = spike_clusters_rel + (
+        new_cluster_id - spike_clusters_rel.min()
+    )
 
     # We find the spikes belonging to modified clusters.
     extended_spike_ids = _extend_spikes(spike_ids, old_spike_clusters)
@@ -71,11 +76,12 @@ def _extend_assignment(spike_ids, old_spike_clusters, spike_clusters_rel, new_cl
     _, extended_spike_clusters = np.unique(extended_spike_clusters, return_inverse=True)
     # Generate new cluster numbers.
     k = new_spike_clusters.max() + 1
-    extended_spike_clusters += (k - extended_spike_clusters.min())
+    extended_spike_clusters += k - extended_spike_clusters.min()
 
     # Finally, we concatenate spike_ids and extended_spike_ids.
     return _concatenate_spike_clusters(
-        (spike_ids, new_spike_clusters), (extended_spike_ids, extended_spike_clusters))
+        (spike_ids, new_spike_clusters), (extended_spike_ids, extended_spike_clusters)
+    )
 
 
 def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
@@ -84,7 +90,7 @@ def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
     largest_old_cluster = np.bincount(old_spike_clusters).argmax()
     descendants = list(set(zip(old_spike_clusters, new_spike_clusters)))
     update_info = UpdateInfo(
-        description='assign',
+        description="assign",
         spike_ids=list(spike_ids),
         spike_clusters=list(new_spike_clusters),
         added=list(new_clusters),
@@ -139,8 +145,7 @@ class Clustering(object):
 
     """
 
-    def __init__(self, spike_clusters, new_cluster_id=None,
-                 spikes_per_cluster=None):
+    def __init__(self, spike_clusters, new_cluster_id=None, spikes_per_cluster=None):
         super(Clustering, self).__init__()
         self._undo_stack = History(base_item=(None, None, None))
         # Spike -> cluster mapping.
@@ -217,7 +222,7 @@ class Clustering(object):
         return _spikes_in_clusters(self.spike_clusters, clusters)
 
     # Actions
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     def _update_cluster_ids(self, to_remove=None, to_add=None):
         # Update the list of non-empty cluster ids.
@@ -234,7 +239,9 @@ class Clustering(object):
         # spikes_per_cluster array.
         coherent = np.all(np.isin(self._cluster_ids, sorted(self._spikes_per_cluster)))
         if not coherent:
-            logger.debug("Recompute spikes_per_cluster manually: this might take a while.")
+            logger.debug(
+                "Recompute spikes_per_cluster manually: this might take a while."
+            )
             sc = self._spike_clusters
             self._spikes_per_cluster = _spikes_per_cluster(sc)
 
@@ -245,7 +252,9 @@ class Clustering(object):
         # Ensure spike_clusters has the right shape.
         spike_ids = _as_array(spike_ids)
         if len(new_spike_clusters) == 1 and len(spike_ids) > 1:
-            new_spike_clusters = np.ones(len(spike_ids), dtype=np.int64) * new_spike_clusters[0]
+            new_spike_clusters = (
+                np.ones(len(spike_ids), dtype=np.int64) * new_spike_clusters[0]
+            )
         old_spike_clusters = self._spike_clusters[spike_ids]
 
         assert len(spike_ids) == len(old_spike_clusters)
@@ -277,12 +286,11 @@ class Clustering(object):
         return up
 
     def _do_merge(self, spike_ids, cluster_ids, to):
-
         # Create the UpdateInfo instance here.
         descendants = [(cluster, to) for cluster in cluster_ids]
         largest_old_cluster = np.bincount(self.spike_clusters[spike_ids]).argmax()
         up = UpdateInfo(
-            description='merge',
+            description="merge",
             spike_ids=list(spike_ids),
             added=[to],
             deleted=list(cluster_ids),
@@ -331,7 +339,10 @@ class Clustering(object):
             to = self.new_cluster_id()
         if to < self.new_cluster_id():
             raise ValueError(
-                "The new cluster numbers should be higher than {0}.".format(self.new_cluster_id()))
+                "The new cluster numbers should be higher than {0}.".format(
+                    self.new_cluster_id()
+                )
+            )
 
         # NOTE: we could have called self.assign() here, but we don't.
         # We circumvent self.assign() for performance reasons.
@@ -342,12 +353,12 @@ class Clustering(object):
         spike_ids = _spikes_in_clusters(self.spike_clusters, cluster_ids)
 
         up = self._do_merge(spike_ids, cluster_ids, to)
-        undo_state = emit('request_undo_state', self, up)
+        undo_state = emit("request_undo_state", self, up)
 
         # Add to stack.
         self._undo_stack.add((spike_ids, [to], undo_state))
 
-        emit('cluster', self, up)
+        emit("cluster", self, up)
         return up
 
     def assign(self, spike_ids, spike_clusters_rel=0):
@@ -397,8 +408,10 @@ class Clustering(object):
         assert not isinstance(spike_ids, slice)
 
         # Ensure `spike_clusters_rel` is an array-like.
-        if not hasattr(spike_clusters_rel, '__len__'):
-            spike_clusters_rel = spike_clusters_rel * np.ones(len(spike_ids), dtype=np.int64)
+        if not hasattr(spike_clusters_rel, "__len__"):
+            spike_clusters_rel = spike_clusters_rel * np.ones(
+                len(spike_ids), dtype=np.int64
+            )
 
         spike_ids = _as_array(spike_ids)
         if len(spike_ids) == 0:
@@ -413,15 +426,16 @@ class Clustering(object):
         # belong to clusters affected by the operation, will be assigned
         # to brand new clusters.
         spike_ids, cluster_ids = _extend_assignment(
-            spike_ids, self._spike_clusters, spike_clusters_rel, self.new_cluster_id())
+            spike_ids, self._spike_clusters, spike_clusters_rel, self.new_cluster_id()
+        )
 
         up = self._do_assign(spike_ids, cluster_ids)
-        undo_state = emit('request_undo_state', self, up)
+        undo_state = emit("request_undo_state", self, up)
 
         # Add the assignment to the undo stack.
         self._undo_stack.add((spike_ids, cluster_ids, undo_state))
 
-        emit('cluster', self, up)
+        emit("cluster", self, up)
         return up
 
     def split(self, spike_ids, spike_clusters_rel=0):
@@ -478,11 +492,11 @@ class Clustering(object):
         clusters_changed = spike_clusters_new[changed]
 
         up = self._do_assign(changed, clusters_changed)
-        up.history = 'undo'
+        up.history = "undo"
         # Add the undo_state object from the undone object.
         up.undo_state = undo_state
 
-        emit('cluster', self, up)
+        emit("cluster", self, up)
         return up
 
     def redo(self):
@@ -509,7 +523,7 @@ class Clustering(object):
 
         # We apply the new assignment.
         up = self._do_assign(spike_ids, cluster_ids)
-        up.history = 'redo'
+        up.history = "redo"
 
-        emit('cluster', self, up)
+        emit("cluster", self, up)
         return up

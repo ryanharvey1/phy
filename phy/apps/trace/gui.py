@@ -3,9 +3,9 @@
 """Trace GUI."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 
@@ -19,9 +19,10 @@ from phy.gui import create_app, run_app, GUI
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Trace GUI
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def create_trace_gui(obj, **kwargs):
     """Create the Trace GUI.
@@ -42,16 +43,18 @@ def create_trace_gui(obj, **kwargs):
 
     """
 
-    gui_name = 'TraceGUI'
+    gui_name = "TraceGUI"
 
     # Support passing a params.py file.
-    if str(obj).endswith('.py'):
+    if str(obj).endswith(".py"):
         params = get_template_params(str(obj))
-        return create_trace_gui(next(iter(params.pop('dat_path'))), **params)
+        return create_trace_gui(next(iter(params.pop("dat_path"))), **params)
 
     kwargs = {
-        k: v for k, v in kwargs.items()
-        if k in ('sample_rate', 'n_channels_dat', 'dtype', 'offset')}
+        k: v
+        for k, v in kwargs.items()
+        if k in ("sample_rate", "n_channels_dat", "dtype", "offset")
+    }
     traces = get_ephys_reader(obj, **kwargs)
 
     create_app()
@@ -60,8 +63,8 @@ def create_trace_gui(obj, **kwargs):
 
     def _get_traces(interval):
         return Bunch(
-            data=select_traces(
-                traces, interval, sample_rate=traces.sample_rate))
+            data=select_traces(traces, interval, sample_rate=traces.sample_rate)
+        )
 
     # TODO: load channel information
 

@@ -53,7 +53,6 @@ class Snippet(object):
     aliases = {}
 
     def __init__(self, code=None, default=None, *args, **kwargs):
-
         # Original source code
         self._source_code = parser.merge_includes(code)
 
@@ -89,15 +88,15 @@ class Snippet(object):
 
         # Symbol table
         self._symbols = {}
-        for (name, dtype) in self._objects["attributes"]:
+        for name, dtype in self._objects["attributes"]:
             self._symbols[name] = "%s_%d" % (name, self._id)
-        for (name, dtype) in self._objects["uniforms"]:
+        for name, dtype in self._objects["uniforms"]:
             self._symbols[name] = "%s_%d" % (name, self._id)
-        for (name, dtype) in self._objects["varyings"]:
+        for name, dtype in self._objects["varyings"]:
             self._symbols[name] = "%s_%d" % (name, self._id)
-        for (name, dtype) in self._objects["consts"]:
+        for name, dtype in self._objects["consts"]:
             self._symbols[name] = "%s_%d" % (name, self._id)
-        for (rtype, name, args, code) in self._objects["functions"]:
+        for rtype, name, args, code in self._objects["functions"]:
             self._symbols[name] = "%s_%d" % (name, self._id)
 
         # Aliases (through kwargs)
@@ -108,7 +107,7 @@ class Snippet(object):
         self._programs = []
 
     def process_kwargs(self, **kwargs):
-        """ Process kwargs as given in __init__() or __call__() """
+        """Process kwargs as given in __init__() or __call__()"""
 
         if "name" in kwargs.keys():
             self._name = kwargs["name"]
@@ -120,13 +119,13 @@ class Snippet(object):
 
     @property
     def name(self):
-        """ Name of the snippet """
+        """Name of the snippet"""
 
         return self._name
 
     @property
     def programs(self):
-        """ Currently attached programs """
+        """Currently attached programs"""
 
         return self._programs
 
@@ -157,7 +156,9 @@ class Snippet(object):
 
         symbols = {}
         objects = self._objects
-        for name, dtype in objects["uniforms"] + objects["attributes"] + objects["varyings"]:
+        for name, dtype in (
+            objects["uniforms"] + objects["attributes"] + objects["varyings"]
+        ):
             symbols[name] = self.symbols[name]
         # return self._symbols
         return symbols
@@ -178,13 +179,13 @@ class Snippet(object):
 
     @property
     def args(self):
-        """ Call arguments """
+        """Call arguments"""
 
         return list(self._args)
 
     @property
     def next(self):
-        """ Next snippet in the arihmetic chain. """
+        """Next snippet in the arihmetic chain."""
 
         if self._next:
             return self._next[1]
@@ -220,7 +221,9 @@ class Snippet(object):
           D.snippets # [A,B,C]
         """
 
-        all = [self, ]
+        all = [
+            self,
+        ]
         for snippet in self._args:
             if isinstance(snippet, Snippet):
                 all.extend(snippet.snippets)
@@ -323,7 +326,7 @@ class Snippet(object):
 
     @property
     def code(self):
-        """ Mangled code """
+        """Mangled code"""
 
         code = ""
         for snippet in self.dependencies:
@@ -331,13 +334,12 @@ class Snippet(object):
         return code
 
     def mangled_code(self):
-        """ Generate mangled code """
+        """Generate mangled code"""
 
         code = self._source_code
         objects = self._objects
         functions = objects["functions"]
-        names = objects["uniforms"] + \
-            objects["attributes"] + objects["varyings"]
+        names = objects["uniforms"] + objects["attributes"] + objects["varyings"]
         for _, name, _, _ in functions:
             symbol = self.symbols[name]
             code = re.sub(r"(?<=[^\w])(%s)(?=\()" % name, symbol, code)
@@ -350,7 +352,7 @@ class Snippet(object):
 
     @property
     def call(self):
-        """ Computes and returns the GLSL code that correspond to the call """
+        """Computes and returns the GLSL code that correspond to the call"""
         self.mangled_code()
         return self.mangled_call()
 
@@ -370,7 +372,6 @@ class Snippet(object):
         # (It may happen a snippet only has uniforms, like the Viewport snippet)
         # WARN: what about Viewport(Transform) ?
         if len(self._objects["functions"]):
-
             # Is there a function specified in the shader source ?
             # Such as <transform.forward>
             if function:
@@ -394,7 +395,7 @@ class Snippet(object):
                         s += arg.mangled_call(None, arguments)
                     else:
                         #  This handle call of the form: transform('.x')
-                        if arguments is not None and arg.startswith('.'):
+                        if arguments is not None and arg.startswith("."):
                             s += arguments
                         s += str(arg)
 
@@ -413,7 +414,7 @@ class Snippet(object):
                 if operand in "+-/*":
                     call = other.mangled_call(function, arguments).strip()
                     if len(call):
-                        s += ' ' + operand + ' ' + call
+                        s += " " + operand + " " + call
 
         # No function defined in this snippet, we look for next one
         else:
@@ -447,7 +448,7 @@ class Snippet(object):
         return self
 
     def copy(self, deep=False):
-        """ Shallow or deep copy of the snippet """
+        """Shallow or deep copy of the snippet"""
 
         if deep:
             snippet = copy.deepcopy(self)

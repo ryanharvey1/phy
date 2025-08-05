@@ -3,9 +3,9 @@
 """Base controller to make clustering GUIs."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 from functools import partial
 import inspect
@@ -27,9 +27,22 @@ from phy.cluster._utils import RotatingProperty
 from phy.cluster.supervisor import Supervisor
 from phy.cluster.views.base import ManualClusteringView, BaseColorView
 from phy.cluster.views import (
-    WaveformView, FeatureView, TraceView, TraceImageView, CorrelogramView, AmplitudeView,
-    ScatterView, ProbeView, RasterView, TemplateView, ISIView, FiringRateView, ClusterScatterView,
-    select_traces)
+    WaveformView,
+    FeatureView,
+    TraceView,
+    TraceImageView,
+    CorrelogramView,
+    AmplitudeView,
+    ScatterView,
+    ProbeView,
+    RasterView,
+    TemplateView,
+    ISIView,
+    FiringRateView,
+    ClusterScatterView,
+    EventPsthView,
+    select_traces,
+)
 from phy.cluster.views.trace import _iter_spike_waveforms
 from phy.gui import GUI
 from phy.gui.gui import _prompt_save
@@ -42,9 +55,10 @@ from phy.utils.plugin import attach_plugins
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Utils
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _concatenate_parents_attributes(cls, name):
     """Return the concatenation of class attributes of a given name among all parents of a
@@ -73,17 +87,18 @@ class StatusBarHandler(logging.Handler):
         self.gui.status_message = self.format(record)
 
 
-#--------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 # Raw data filtering
-#--------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+
 
 class RawDataFilter(RotatingProperty):
     def __init__(self):
         super(RawDataFilter, self).__init__()
-        self.add('raw', lambda x, axis=None: x)
+        self.add("raw", lambda x, axis=None: x)
 
     def add_default_filter(self, sample_rate):
-        b, a = butter(3, 150.0 / sample_rate * 2.0, 'high')
+        b, a = butter(3, 150.0 / sample_rate * 2.0, "high")
 
         @self.add_filter
         def high_pass(arr, axis=0):
@@ -92,7 +107,8 @@ class RawDataFilter(RotatingProperty):
             arr = lfilter(b, a, arr, axis=axis)
             arr = np.flip(arr, axis=axis)
             return arr
-        self.set('high_pass')
+
+        self.set("high_pass")
 
     def add_filter(self, fun=None, name=None):
         """Add a raw data filter."""
@@ -114,38 +130,38 @@ class RawDataFilter(RotatingProperty):
         return arr
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # View mixins
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class WaveformMixin(object):
     n_spikes_waveforms = 100
     batch_size_waveforms = 10
 
     _state_params = (
-        'n_spikes_waveforms', 'batch_size_waveforms',
+        "n_spikes_waveforms",
+        "batch_size_waveforms",
     )
 
-    _new_views = ('WaveformView',)
+    _new_views = ("WaveformView",)
 
     # Map an amplitude type to a method name.
-    _amplitude_functions = (
-        ('raw', 'get_spike_raw_amplitudes'),
-    )
+    _amplitude_functions = (("raw", "get_spike_raw_amplitudes"),)
 
     _waveform_functions = (
-        ('waveforms', '_get_waveforms'),
-        ('mean_waveforms', '_get_mean_waveforms'),
+        ("waveforms", "_get_waveforms"),
+        ("mean_waveforms", "_get_mean_waveforms"),
     )
 
     _cached = (
         # 'get_spike_raw_amplitudes',
-        '_get_waveforms_with_n_spikes',
+        "_get_waveforms_with_n_spikes",
     )
 
     _memcached = (
         # 'get_mean_spike_raw_amplitudes',
-        '_get_mean_waveforms',
+        "_get_mean_waveforms",
     )
 
     def get_spike_raw_amplitudes(self, spike_ids, channel_id=None, **kwargs):
@@ -179,8 +195,8 @@ class WaveformMixin(object):
         return np.mean(self.get_spike_raw_amplitudes(spike_ids))
 
     def _get_waveforms_with_n_spikes(
-            self, cluster_id, n_spikes_waveforms, current_filter=None):
-
+        self, cluster_id, n_spikes_waveforms, current_filter=None
+    ):
         # HACK: we pass self.raw_data_filter.current_filter so that it is cached properly.
         pos = self.model.channel_positions
 
@@ -188,11 +204,14 @@ class WaveformMixin(object):
         if self.model.spike_waveforms is not None:
             subset_spikes = self.model.spike_waveforms.spike_ids
             spike_ids = self.selector(
-                n_spikes_waveforms, [cluster_id], subset_spikes=subset_spikes)
+                n_spikes_waveforms, [cluster_id], subset_spikes=subset_spikes
+            )
         # Or keep spikes from a subset of the chunks for performance reasons (decompression will
         # happen on the fly here).
         else:
-            spike_ids = self.selector(n_spikes_waveforms, [cluster_id], subset_chunks=True)
+            spike_ids = self.selector(
+                n_spikes_waveforms, [cluster_id], subset_chunks=True
+            )
 
         # Get the best channels.
         channel_ids = self.get_best_channels(cluster_id)
@@ -217,23 +236,27 @@ class WaveformMixin(object):
     def _get_waveforms(self, cluster_id):
         """Return a selection of waveforms for a cluster."""
         return self._get_waveforms_with_n_spikes(
-            cluster_id, self.n_spikes_waveforms, current_filter=self.raw_data_filter.current)
+            cluster_id,
+            self.n_spikes_waveforms,
+            current_filter=self.raw_data_filter.current,
+        )
 
     def _get_mean_waveforms(self, cluster_id, current_filter=None):
         """Get the mean waveform of a cluster on its best channels."""
         b = self._get_waveforms(cluster_id)
         if b.data is not None:
             b.data = b.data.mean(axis=0)[np.newaxis, ...]
-        b['alpha'] = 1.
+        b["alpha"] = 1.0
         return b
 
     def _set_view_creator(self):
         super(WaveformMixin, self)._set_view_creator()
-        self.view_creator['WaveformView'] = self.create_waveform_view
+        self.view_creator["WaveformView"] = self.create_waveform_view
 
     def _get_waveforms_dict(self):
         waveform_functions = _concatenate_parents_attributes(
-            self.__class__, '_waveform_functions')
+            self.__class__, "_waveform_functions"
+        )
         return {name: getattr(self, method) for name, method in waveform_functions}
 
     def create_waveform_view(self):
@@ -247,7 +270,7 @@ class WaveformMixin(object):
         def on_select_channel(sender, channel_id=None, key=None, button=None):
             # Update the Selection object with the channel id clicked in the waveform view.
             self.selection.channel_id = channel_id
-            emit('selected_channel_changed', view)
+            emit("selected_channel_changed", view)
 
         # Add extra actions.
         @connect(sender=view)
@@ -255,7 +278,10 @@ class WaveformMixin(object):
             # NOTE: this callback function is called in WaveformView.attach().
 
             @view.actions.add(
-                alias='wn', prompt=True, prompt_default=lambda: str(self.n_spikes_waveforms))
+                alias="wn",
+                prompt=True,
+                prompt_default=lambda: str(self.n_spikes_waveforms),
+            )
             def change_n_spikes_waveforms(n_spikes_waveforms):
                 """Change the number of spikes displayed in the waveform view."""
                 self.n_spikes_waveforms = n_spikes_waveforms
@@ -276,27 +302,27 @@ class FeatureMixin(object):
     n_spikes_features_background = 2500
 
     _state_params = (
-        'n_spikes_features', 'n_spikes_features_background',
+        "n_spikes_features",
+        "n_spikes_features_background",
     )
 
-    _new_views = ('FeatureView',)
+    _new_views = ("FeatureView",)
 
-    _amplitude_functions = (
-        ('feature', 'get_spike_feature_amplitudes'),
-    )
+    _amplitude_functions = (("feature", "get_spike_feature_amplitudes"),)
 
     _cached = (
-        '_get_features',
-        'get_spike_feature_amplitudes',
+        "_get_features",
+        "get_spike_feature_amplitudes",
     )
 
     def get_spike_feature_amplitudes(
-            self, spike_ids, channel_id=None, channel_ids=None, pc=None, **kwargs):
+        self, spike_ids, channel_id=None, channel_ids=None, pc=None, **kwargs
+    ):
         """Return the features for the specified channel and PC."""
         if self.model.features is None:
             return
         channel_id = channel_id if channel_id is not None else channel_ids[0]
-        features = self._get_spike_features(spike_ids, [channel_id]).get('data', None)
+        features = self._get_spike_features(spike_ids, [channel_id]).get("data", None)
         if features is None:  # pragma: no cover
             return
         assert features.shape[0] == len(spike_ids)
@@ -311,14 +337,14 @@ class FeatureMixin(object):
         @connect
         def on_selected_feature_changed(sender):
             # Replot the amplitude view with the selected feature.
-            view.amplitudes_type = 'feature'
+            view.amplitudes_type = "feature"
             view.plot()
 
         @connect(sender=self.supervisor)
         def on_select(sender, cluster_ids, update_views=True):
             # Update the feature amplitude view when the cluster selection changes,
             # because the best channels change as well.
-            if update_views and view.amplitudes_type == 'feature':
+            if update_views and view.amplitudes_type == "feature":
                 view.plot()
 
         @connect(sender=view)
@@ -346,7 +372,7 @@ class FeatureMixin(object):
             n = self.n_spikes_features if not load_all else None
             spike_ids = self.get_spike_ids(cluster_id, n=n)
         # Remove spike_ids that do not belong to model.features_rows
-        if getattr(self.model, 'features_rows', None) is not None:  # pragma: no cover
+        if getattr(self.model, "features_rows", None) is not None:  # pragma: no cover
             spike_ids = np.intersect1d(spike_ids, self.model.features_rows)
         return spike_ids
 
@@ -357,9 +383,8 @@ class FeatureMixin(object):
             return
         spike_times = self._get_spike_times_reordered(spike_ids)
         return Bunch(
-            data=spike_times,
-            spike_ids=spike_ids,
-            lim=(0., self.model.duration))
+            data=spike_times, spike_ids=spike_ids, lim=(0.0, self.model.duration)
+        )
 
     def _get_spike_features(self, spike_ids, channel_ids):
         if len(spike_ids) == 0:  # pragma: no cover
@@ -372,7 +397,11 @@ class FeatureMixin(object):
         assert np.isnan(data).sum() == 0
         channel_labels = self._get_channel_labels(channel_ids)
         return Bunch(
-            data=data, spike_ids=spike_ids, channel_ids=channel_ids, channel_labels=channel_labels)
+            data=data,
+            spike_ids=spike_ids,
+            channel_ids=channel_ids,
+            channel_labels=channel_labels,
+        )
 
     def _get_features(self, cluster_id=None, channel_ids=None, load_all=False):
         """Return the features of a given cluster on specified channels."""
@@ -386,12 +415,15 @@ class FeatureMixin(object):
         return self._get_spike_features(spike_ids, channel_ids)
 
     def create_feature_view(self):
-        if self.model.features is None and getattr(self.model, 'spike_waveforms', None) is None:
+        if (
+            self.model.features is None
+            and getattr(self.model, "spike_waveforms", None) is None
+        ):
             # NOTE: we can still construct the feature view when there are spike waveforms.
             return
         view = FeatureView(
             features=self._get_features,
-            attributes={'time': self._get_feature_view_spike_times}
+            attributes={"time": self._get_feature_view_spike_times},
         )
 
         @connect
@@ -405,7 +437,7 @@ class FeatureMixin(object):
             # Update the Selection object with the channel id and PC clicked in the feature view.
             self.selection.channel_id = channel_id
             self.selection.feature_pc = pc
-            emit('selected_feature_changed', view)
+            emit("selected_feature_changed", view)
 
         connect(view.on_select_channel)
         connect(view.on_request_split)
@@ -421,7 +453,7 @@ class FeatureMixin(object):
 
     def _set_view_creator(self):
         super(FeatureMixin, self)._set_view_creator()
-        self.view_creator['FeatureView'] = self.create_feature_view
+        self.view_creator["FeatureView"] = self.create_feature_view
 
 
 class TemplateMixin(object):
@@ -441,29 +473,25 @@ class TemplateMixin(object):
 
     """
 
-    _new_views = ('TemplateView',)
+    _new_views = ("TemplateView",)
 
-    _amplitude_functions = (
-        ('template', 'get_spike_template_amplitudes'),
-    )
+    _amplitude_functions = (("template", "get_spike_template_amplitudes"),)
 
-    _waveform_functions = (
-        ('templates', '_get_template_waveforms'),
-    )
+    _waveform_functions = (("templates", "_get_template_waveforms"),)
 
     _cached = (
-        'get_amplitudes',
-        'get_spike_template_amplitudes',
-        'get_spike_template_features',
+        "get_amplitudes",
+        "get_spike_template_amplitudes",
+        "get_spike_template_features",
     )
 
     _memcached = (
-        '_get_template_waveforms',
-        'get_mean_spike_template_amplitudes',
-        'get_template_counts',
-        'get_template_for_cluster',
-        'get_template_amplitude',
-        'get_cluster_amplitude',
+        "_get_template_waveforms",
+        "get_mean_spike_template_amplitudes",
+        "get_template_counts",
+        "get_template_for_cluster",
+        "get_template_amplitude",
+        "get_cluster_amplitude",
     )
 
     def __init__(self, *args, **kwargs):
@@ -471,8 +499,8 @@ class TemplateMixin(object):
 
     def _get_amplitude_functions(self):
         out = super(TemplateMixin, self)._get_amplitude_functions()
-        if getattr(self.model, 'template_features', None) is not None:
-            out['template_feature'] = self.get_spike_template_features
+        if getattr(self.model, "template_features", None) is not None:
+            out["template_feature"] = self.get_spike_template_features
         return out
 
     def get_amplitudes(self, cluster_id, load_all=False):
@@ -508,7 +536,7 @@ class TemplateMixin(object):
     def _set_cluster_metrics(self):
         """Add an amplitude column in the cluster view."""
         super(TemplateMixin, self)._set_cluster_metrics()
-        self.cluster_metrics['amp'] = self.get_cluster_amplitude
+        self.cluster_metrics["amp"] = self.get_cluster_amplitude
 
     def get_spike_template_amplitudes(self, spike_ids, **kwargs):
         """Return the spike template amplitudes as stored in `amplitudes.npy`."""
@@ -554,7 +582,9 @@ class TemplateMixin(object):
         masks = count / float(count.max())
         masks = np.tile(masks.reshape((-1, 1)), (1, len(channel_ids)))
         # Get all templates from which this cluster stems from.
-        templates = [self.model.get_template(template_id) for template_id in template_ids]
+        templates = [
+            self.model.get_template(template_id) for template_id in template_ids
+        ]
         # Construct the waveforms array.
         ns = self.model.n_samples_waveforms
         data = np.zeros((len(template_ids), ns, self.model.n_channels))
@@ -567,7 +597,9 @@ class TemplateMixin(object):
             channel_ids=channel_ids,
             channel_labels=self._get_channel_labels(channel_ids),
             channel_positions=pos[channel_ids],
-            masks=masks, alpha=1.)
+            masks=masks,
+            alpha=1.0,
+        )
 
     def _get_all_templates(self, cluster_ids):
         """Get the template waveforms of a set of clusters."""
@@ -582,7 +614,7 @@ class TemplateMixin(object):
 
     def _set_view_creator(self):
         super(TemplateMixin, self)._set_view_creator()
-        self.view_creator['TemplateView'] = self.create_template_view
+        self.view_creator["TemplateView"] = self.create_template_view
 
     def create_template_view(self):
         """Create a template view."""
@@ -597,26 +629,30 @@ class TemplateMixin(object):
 
 
 class TraceMixin(object):
-
-    _new_views = ('TraceView', 'TraceImageView')
+    _new_views = ("TraceView", "TraceImageView")
     waveform_duration = 1.0  # in milliseconds
 
     def _get_traces(self, interval, show_all_spikes=False):
         """Get traces and spike waveforms."""
         traces_interval = select_traces(
-            self.model.traces, interval, sample_rate=self.model.sample_rate)
+            self.model.traces, interval, sample_rate=self.model.sample_rate
+        )
         # Filter the loaded traces.
         traces_interval = self.raw_data_filter.apply(traces_interval, axis=0)
         out = Bunch(data=traces_interval)
-        out.waveforms = list(_iter_spike_waveforms(
-            interval=interval,
-            traces_interval=traces_interval,
-            model=self.model,
-            supervisor=self.supervisor,
-            n_samples_waveforms=int(round(1e-3 * self.waveform_duration * self.model.sample_rate)),
-            get_best_channels=self.get_channel_amplitudes,
-            show_all_spikes=show_all_spikes,
-        ))
+        out.waveforms = list(
+            _iter_spike_waveforms(
+                interval=interval,
+                traces_interval=traces_interval,
+                model=self.model,
+                supervisor=self.supervisor,
+                n_samples_waveforms=int(
+                    round(1e-3 * self.waveform_duration * self.model.sample_rate)
+                ),
+                get_best_channels=self.get_channel_amplitudes,
+                show_all_spikes=show_all_spikes,
+            )
+        )
         return out
 
     def _trace_spike_times(self):
@@ -646,19 +682,20 @@ class TraceMixin(object):
         # Update the get_traces() function with show_all_spikes.
         def _get_traces(interval):
             return self._get_traces(interval, show_all_spikes=view.show_all_spikes)
+
         view.traces = _get_traces
         view.ex_status = self.raw_data_filter.current
 
         @connect(sender=view)
         def on_select_spike(sender, channel_id=None, spike_id=None, cluster_id=None):
             # Update the global selection object.
-            self.selection['spike_ids'] = [spike_id]
+            self.selection["spike_ids"] = [spike_id]
             # Select the corresponding cluster.
             self.supervisor.select([cluster_id])
 
         @connect
         def on_time_range_selected(sender, interval):
-            self.selection['selected_time_range'] = interval
+            self.selection["selected_time_range"] = interval
 
         @connect
         def on_select_time(sender, time):
@@ -698,13 +735,14 @@ class TraceMixin(object):
 
     def _set_view_creator(self):
         super(TraceMixin, self)._set_view_creator()
-        self.view_creator['TraceView'] = self.create_trace_view
-        self.view_creator['TraceImageView'] = self.create_trace_image_view
+        self.view_creator["TraceView"] = self.create_trace_view
+        self.view_creator["TraceImageView"] = self.create_trace_image_view
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Base Controller
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class BaseController(object):
     """Base controller for manual clustering GUI.
@@ -810,7 +848,7 @@ class BaseController(object):
 
     """
 
-    gui_name = 'BaseGUI'
+    gui_name = "BaseGUI"
     gui_version = 2
 
     # Default value of the 'show_mapped_channels' param if it is not set in params.py.
@@ -821,8 +859,7 @@ class BaseController(object):
 
     # Pairs (amplitude_type_name, method_name) where amplitude methods return spike amplitudes
     # of a given type.
-    _amplitude_functions = (
-    )
+    _amplitude_functions = ()
 
     n_spikes_correlograms = 100000
 
@@ -832,42 +869,52 @@ class BaseController(object):
 
     # Controller attributes to load/save in the GUI state.
     _state_params = (
-        'n_spikes_amplitudes', 'n_spikes_correlograms',
-        'raw_data_filter_name',
+        "n_spikes_amplitudes",
+        "n_spikes_correlograms",
+        "raw_data_filter_name",
     )
 
     # Methods that are cached in memory (and on disk) for performance.
     _memcached = (
-        'get_mean_firing_rate',
-        'get_best_channel',
-        'get_best_channels',
-        'get_channel_shank',
-        'get_probe_depth',
-        'peak_channel_similarity',
+        "get_mean_firing_rate",
+        "get_best_channel",
+        "get_best_channels",
+        "get_channel_shank",
+        "get_probe_depth",
+        "peak_channel_similarity",
     )
     # Methods that are cached on disk for performance.
     _cached = (
-        '_get_correlograms',
-        '_get_correlograms_rate',
+        "_get_correlograms",
+        "_get_correlograms_rate",
     )
 
     # Views to load by default.
     _new_views = (
-        'ClusterScatterView', 'CorrelogramView', 'AmplitudeView',
-        'ISIView', 'FiringRateView', 'ProbeView',
+        "ClusterScatterView",
+        "CorrelogramView",
+        "AmplitudeView",
+        "ISIView",
+        "FiringRateView",
+        "ProbeView",
     )
 
     default_shortcuts = {
-        'toggle_spike_reorder': 'ctrl+r',
-        'switch_raw_data_filter': 'alt+r',
+        "toggle_spike_reorder": "ctrl+r",
+        "switch_raw_data_filter": "alt+r",
     }
     default_snippets = {}
 
     def __init__(
-            self, dir_path=None, config_dir=None, model=None,
-            clear_cache=None, clear_state=None,
-            enable_threading=True, **kwargs):
-
+        self,
+        dir_path=None,
+        config_dir=None,
+        model=None,
+        clear_cache=None,
+        clear_state=None,
+        enable_threading=True,
+        **kwargs,
+    ):
         self._enable_threading = enable_threading
 
         assert dir_path
@@ -875,10 +922,12 @@ class BaseController(object):
         assert self.dir_path.exists()
 
         # Add a log file.
-        _add_log_file(Path(dir_path) / 'phy.log')
+        _add_log_file(Path(dir_path) / "phy.log")
 
         # Create or reuse a Model instance (any object)
-        self.model = self._create_model(dir_path=dir_path, **kwargs) if model is None else model
+        self.model = (
+            self._create_model(dir_path=dir_path, **kwargs) if model is None else model
+        )
 
         # Set up the cache.
         self._set_cache(clear_cache)
@@ -898,8 +947,10 @@ class BaseController(object):
 
         # The controller.default_views can be set by the child class, otherwise it is computed
         # by concatenating all parents _new_views.
-        if getattr(self, 'default_views', None) is None:
-            self.default_views = _concatenate_parents_attributes(self.__class__, '_new_views')
+        if getattr(self, "default_views", None) is None:
+            self.default_views = _concatenate_parents_attributes(
+                self.__class__, "_new_views"
+            )
         self._async_callers = {}
         self.config_dir = config_dir
 
@@ -907,15 +958,19 @@ class BaseController(object):
         if clear_state:
             self._clear_state()
 
-        self.selection = Selection(self)  # keep track of selected clusters, spikes, channels, etc.
+        self.selection = Selection(
+            self
+        )  # keep track of selected clusters, spikes, channels, etc.
 
         # Attach plugins before setting up the supervisor, so that plugins
         # can register callbacks to events raised during setup.
         # For example, 'request_cluster_metrics' to specify custom metrics
         # in the cluster and similarity views.
         self.attached_plugins = attach_plugins(
-            self, config_dir=config_dir,
-            plugins=kwargs.get('plugins', None), dirs=kwargs.get('plugin_dirs', None),
+            self,
+            config_dir=config_dir,
+            plugins=kwargs.get("plugins", None),
+            dirs=kwargs.get("plugin_dirs", None),
         )
 
         # Cache the methods specified in self._memcached and self._cached. All method names
@@ -928,7 +983,7 @@ class BaseController(object):
         # Set up the Selector instance, responsible for selecting the spikes for display.
         self._set_selector()
 
-        emit('controller_ready', self)
+        emit("controller_ready", self)
 
     # Internal initialization methods
     # -------------------------------------------------------------------------
@@ -947,14 +1002,14 @@ class BaseController(object):
         if state_path.exists():
             logger.warning("Deleting %s.", state_path)
             state_path.unlink()
-        local_path = self.cache_dir / 'state.json'
+        local_path = self.cache_dir / "state.json"
         if local_path.exists():
             local_path.unlink()
             logger.warning("Deleting %s.", local_path)
 
     def _set_cache(self, clear_cache=None):
         """Set up the cache, clear it if required, and create the Context instance."""
-        self.cache_dir = self.dir_path / '.phy'
+        self.cache_dir = self.dir_path / ".phy"
         if clear_cache:
             self._clear_cache()
         self.context = Context(self.cache_dir)
@@ -966,34 +1021,39 @@ class BaseController(object):
 
         """
         self.view_creator = {
-            'ClusterScatterView': self.create_cluster_scatter_view,
-            'CorrelogramView': self.create_correlogram_view,
-            'ISIView': self._make_histogram_view(ISIView, self._get_isi),
-            'FiringRateView': self._make_histogram_view(FiringRateView, self._get_firing_rate),
-            'AmplitudeView': self.create_amplitude_view,
-            'ProbeView': self.create_probe_view,
-            'RasterView': self.create_raster_view,
-            'IPythonView': self.create_ipython_view,
+            "ClusterScatterView": self.create_cluster_scatter_view,
+            "CorrelogramView": self.create_correlogram_view,
+            "EventPsthView": self.create_event_psth_view,
+            "ISIView": self._make_histogram_view(ISIView, self._get_isi),
+            "FiringRateView": self._make_histogram_view(
+                FiringRateView, self._get_firing_rate
+            ),
+            "AmplitudeView": self.create_amplitude_view,
+            "ProbeView": self.create_probe_view,
+            "RasterView": self.create_raster_view,
+            "IPythonView": self.create_ipython_view,
         }
         # Spike attributes.
-        for name, arr in getattr(self.model, 'spike_attributes', {}).items():
-            view_name = 'Spike%sView' % name.title()
-            self.view_creator[view_name] = self._make_spike_attributes_view(view_name, name, arr)
+        for name, arr in getattr(self.model, "spike_attributes", {}).items():
+            view_name = "Spike%sView" % name.title()
+            self.view_creator[view_name] = self._make_spike_attributes_view(
+                view_name, name, arr
+            )
 
     def _set_cluster_metrics(self):
         """Set the cluster metrics dictionary with some default metrics."""
         self.cluster_metrics = {}  # dictionary {name: function cluster_id => value}, for plugins
-        self.cluster_metrics['ch'] = self.get_best_channel_label
-        if getattr(self.model, 'channel_shanks', None) is not None:
-            self.cluster_metrics['sh'] = self.get_channel_shank
-        self.cluster_metrics['depth'] = self.get_probe_depth
-        self.cluster_metrics['fr'] = self.get_mean_firing_rate
+        self.cluster_metrics["ch"] = self.get_best_channel_label
+        if getattr(self.model, "channel_shanks", None) is not None:
+            self.cluster_metrics["sh"] = self.get_channel_shank
+        self.cluster_metrics["depth"] = self.get_probe_depth
+        self.cluster_metrics["fr"] = self.get_mean_firing_rate
 
     def _set_similarity_functions(self):
         """Set the `similarity_functions` dictionary that maps similarity names to functions
         `cluster_id => [(other_cluster_id, similarity_value)...]`."""
         self.similarity_functions = {
-            'peak_channel': self.peak_channel_similarity,
+            "peak_channel": self.peak_channel_similarity,
         }
         # Default similarity function name.
         self.similarity = list(self.similarity_functions.keys())[0]
@@ -1001,10 +1061,10 @@ class BaseController(object):
     def _set_supervisor(self):
         """Create the Supervisor instance."""
         # Load the new cluster id.
-        new_cluster_id = self.context.load('new_cluster_id').get('new_cluster_id', None)
+        new_cluster_id = self.context.load("new_cluster_id").get("new_cluster_id", None)
 
         # Cluster groups.
-        cluster_groups = self.model.metadata.get('group', {})
+        cluster_groups = self.model.metadata.get("group", {})
 
         # Create the Supervisor instance.
         supervisor = Supervisor(
@@ -1018,7 +1078,7 @@ class BaseController(object):
         )
         # Load the non-group metadata from the model to the cluster_meta.
         for name in sorted(self.model.metadata):
-            if name == 'group':
+            if name == "group":
                 continue
             values = self.model.metadata.get(name, {})
             d = {cluster_id: {name: value} for cluster_id, value in values.items()}
@@ -1035,7 +1095,8 @@ class BaseController(object):
 
         def spikes_per_cluster(cluster_id):
             return self.supervisor.clustering.spikes_per_cluster.get(
-                cluster_id, np.array([], dtype=np.int64))
+                cluster_id, np.array([], dtype=np.int64)
+            )
 
         try:
             chunk_bounds = self.model.traces.chunk_bounds
@@ -1046,26 +1107,28 @@ class BaseController(object):
             get_spikes_per_cluster=spikes_per_cluster,
             spike_times=self.model.spike_samples,  # NOTE: chunk_bounds is in samples, not seconds
             chunk_bounds=chunk_bounds,
-            n_chunks_kept=self.n_chunks_kept)
+            n_chunks_kept=self.n_chunks_kept,
+        )
 
     def _cache_methods(self):
         """Cache methods as specified in `self._memcached` and `self._cached`."""
         # Environment variable that can be used to disable the cache.
-        if not os.environ.get('PHY_DISABLE_CACHE', False):
-            memcached = _concatenate_parents_attributes(self.__class__, '_memcached')
-            cached = _concatenate_parents_attributes(self.__class__, '_cached')
+        if not os.environ.get("PHY_DISABLE_CACHE", False):
+            memcached = _concatenate_parents_attributes(self.__class__, "_memcached")
+            cached = _concatenate_parents_attributes(self.__class__, "_cached")
             _cache_methods(self, memcached, cached)
 
     def _get_channel_labels(self, channel_ids=None):
         """Return the labels of a list of channels."""
         if channel_ids is None:
             channel_ids = np.arange(self.model.n_channels)
-        if (hasattr(self.model, 'channel_mapping') and
-                getattr(self.model, 'show_mapped_channels', self.default_show_mapped_channels)):
+        if hasattr(self.model, "channel_mapping") and getattr(
+            self.model, "show_mapped_channels", self.default_show_mapped_channels
+        ):
             channel_labels = self.model.channel_mapping[channel_ids]
         else:
             channel_labels = channel_ids
-        return ['%d' % ch for ch in channel_labels]
+        return ["%d" % ch for ch in channel_labels]
 
     # Internal view methods
     # -------------------------------------------------------------------------
@@ -1097,6 +1160,7 @@ class BaseController(object):
                 view.set_cluster_ids(self.supervisor.shown_cluster_ids)
                 # Replot the view entirely.
                 view.plot()
+
             if is_async:
                 ac.set(_update_plot)
             else:
@@ -1167,10 +1231,14 @@ class BaseController(object):
         # HACK: rename id to cluster_id for consistency in the cluster_info.tsv file.
         cluster_info = self.supervisor.cluster_info.copy()
         for d in cluster_info:
-            d['cluster_id'] = d.pop('id')
+            d["cluster_id"] = d.pop("id")
         write_tsv(
-            self.dir_path / 'cluster_info.tsv', cluster_info,
-            first_field='cluster_id', exclude_fields=('is_masked',), n_significant_figures=8)
+            self.dir_path / "cluster_info.tsv",
+            cluster_info,
+            first_field="cluster_id",
+            exclude_fields=("is_masked",),
+            n_significant_figures=8,
+        )
 
     # Model methods
     # -------------------------------------------------------------------------
@@ -1196,19 +1264,18 @@ class BaseController(object):
     def get_best_channels(self, cluster_id):  # pragma: no cover
         """Return the best channels of a given cluster. To be overriden."""
         logger.warning(
-            "This method should be overriden and return a non-empty list of best channels.")
+            "This method should be overriden and return a non-empty list of best channels."
+        )
         return []
 
     def get_channel_amplitudes(self, cluster_id):  # pragma: no cover
         """Return the best channels of a given cluster along with their relative amplitudes.
         To be overriden."""
-        logger.warning(
-            "This method should be overriden.")
+        logger.warning("This method should be overriden.")
         return []
 
     def get_channel_shank(self, cluster_id):
-        """Return the shank of a cluster's best channel, if the channel_shanks array is available.
-        """
+        """Return the shank of a cluster's best channel, if the channel_shanks array is available."""
         best_channel_id = self.get_best_channel(cluster_id)
         return self.model.channel_shanks[best_channel_id]
 
@@ -1220,8 +1287,10 @@ class BaseController(object):
     def get_clusters_on_channel(self, channel_id):
         """Return all clusters which have the specified channel among their best channels."""
         return [
-            cluster_id for cluster_id in self.supervisor.clustering.cluster_ids
-            if channel_id in self.get_best_channels(cluster_id)]
+            cluster_id
+            for cluster_id in self.supervisor.clustering.cluster_ids
+            if channel_id in self.get_best_channels(cluster_id)
+        ]
 
     # Default similarity functions
     # -------------------------------------------------------------------------
@@ -1243,8 +1312,10 @@ class BaseController(object):
         """
         ch = self.get_best_channel(cluster_id)
         return [
-            (other, 1.) for other in self.supervisor.clustering.cluster_ids
-            if ch in self.get_best_channels(other)]
+            (other, 1.0)
+            for other in self.supervisor.clustering.cluster_ids
+            if ch in self.get_best_channels(other)
+        ]
 
     # Public spike methods
     # -------------------------------------------------------------------------
@@ -1269,8 +1340,10 @@ class BaseController(object):
     def _get_spike_times_reordered(self, spike_ids):
         """Get spike times, reordered if needed."""
         spike_times = self.model.spike_times
-        if (self.selection.get('do_reorder', None) and
-                getattr(self.model, 'spike_times_reordered', None) is not None):
+        if (
+            self.selection.get("do_reorder", None)
+            and getattr(self.model, "spike_times_reordered", None) is not None
+        ):
             spike_times = self.model.spike_times_reordered
         spike_times = spike_times[spike_ids]
         return spike_times
@@ -1279,7 +1352,8 @@ class BaseController(object):
         """Return a dictionary mapping amplitude names to corresponding methods."""
         # Concatenation of all _amplitude_functions attributes in the class hierarchy.
         amplitude_functions = _concatenate_parents_attributes(
-            self.__class__, '_amplitude_functions')
+            self.__class__, "_amplitude_functions"
+        )
         return {name: getattr(self, method) for name, method in amplitude_functions}
 
     def _get_amplitude_spike_ids(self, cluster_id, load_all=False):
@@ -1305,7 +1379,9 @@ class BaseController(object):
         out = []
         n = self.n_spikes_amplitudes if not load_all else None
         # Find the first cluster, used to determine the best channels.
-        first_cluster = next(cluster_id for cluster_id in cluster_ids if cluster_id is not None)
+        first_cluster = next(
+            cluster_id for cluster_id in cluster_ids if cluster_id is not None
+        )
         # Best channels of the first cluster.
         channel_ids = self.get_best_channels(first_cluster)
         # Best channel of the first cluster.
@@ -1322,7 +1398,7 @@ class BaseController(object):
         # from the raw data.
         # Otherwise we load the spikes randomly from the whole dataset.
         subset_chunks = subset_spikes = None
-        if name == 'raw':
+        if name == "raw":
             if self.model.spike_waveforms is not None:
                 subset_spikes = self.model.spike_waveforms.spike_ids
             else:
@@ -1332,43 +1408,58 @@ class BaseController(object):
             if cluster_id is not None:
                 # Cluster spikes.
                 spike_ids = self.get_spike_ids(
-                    cluster_id, n=n, subset_spikes=subset_spikes, subset_chunks=subset_chunks)
+                    cluster_id,
+                    n=n,
+                    subset_spikes=subset_spikes,
+                    subset_chunks=subset_chunks,
+                )
             else:
                 # Background spikes.
                 spike_ids = self.selector(
-                    n, other_clusters, subset_spikes=subset_spikes, subset_chunks=subset_chunks)
+                    n,
+                    other_clusters,
+                    subset_spikes=subset_spikes,
+                    subset_chunks=subset_chunks,
+                )
             # Get the spike times.
             spike_times = self._get_spike_times_reordered(spike_ids)
-            if name in ('feature', 'raw'):
+            if name in ("feature", "raw"):
                 # Retrieve the feature PC selected in the feature view
                 # or the channel selected in the waveform view.
-                channel_id = self.selection.get('channel_id', channel_id)
-            pc = self.selection.get('feature_pc', None)
+                channel_id = self.selection.get("channel_id", channel_id)
+            pc = self.selection.get("feature_pc", None)
             # Call the spike amplitude getter function.
             amplitudes = f(
-                spike_ids, channel_ids=channel_ids, channel_id=channel_id, pc=pc,
-                first_cluster=first_cluster)
+                spike_ids,
+                channel_ids=channel_ids,
+                channel_id=channel_id,
+                pc=pc,
+                first_cluster=first_cluster,
+            )
             if amplitudes is None:
                 continue
             assert amplitudes.shape == spike_ids.shape == spike_times.shape
-            out.append(Bunch(
-                amplitudes=amplitudes,
-                spike_ids=spike_ids,
-                spike_times=spike_times,
-            ))
+            out.append(
+                Bunch(
+                    amplitudes=amplitudes,
+                    spike_ids=spike_ids,
+                    spike_times=spike_times,
+                )
+            )
         return out
 
     def create_amplitude_view(self):
         """Create the amplitude view."""
         amplitudes_dict = {
             name: partial(self._amplitude_getter, name=name)
-            for name in sorted(self._get_amplitude_functions())}
+            for name in sorted(self._get_amplitude_functions())
+        }
         if not amplitudes_dict:
             return
         # NOTE: we disable raw amplitudes for now as they're either too slow to load,
         # or they're loaded from a small part of the dataset which is not very useful.
-        if len(amplitudes_dict) > 1 and 'raw' in amplitudes_dict:
-            del amplitudes_dict['raw']
+        if len(amplitudes_dict) > 1 and "raw" in amplitudes_dict:
+            del amplitudes_dict["raw"]
         view = AmplitudeView(
             amplitudes=amplitudes_dict,
             amplitudes_type=None,  # TODO: GUI state
@@ -1385,7 +1476,7 @@ class BaseController(object):
         def on_selected_channel_changed(sender):
             """Called when a channel is selected in the waveform view."""
             # Do nothing if the displayed amplitude does not depend on the channel.
-            if view.amplitudes_type not in ('feature', 'raw'):
+            if view.amplitudes_type not in ("feature", "raw"):
                 return
             # Otherwise, replot the amplitude view, which will use
             # Selection.selected_channel_id to use the requested channel in the computation of
@@ -1396,7 +1487,7 @@ class BaseController(object):
         def on_select(sender, cluster_ids, update_views=True):
             # Update the amplitude view when the cluster selection changes,
             # because the best channels change as well.
-            if update_views and view.amplitudes_type == 'raw' and len(cluster_ids):
+            if update_views and view.amplitudes_type == "raw" and len(cluster_ids):
                 # Update the channel used in the amplitude when the cluster selection changes.
                 self.selection.channel_id = self.get_best_channel(cluster_ids[0])
 
@@ -1479,15 +1570,21 @@ class BaseController(object):
         st = self.model.spike_times[spike_ids]
         sc = self.supervisor.clustering.spike_clusters[spike_ids]
         return correlograms(
-            st, sc, sample_rate=self.model.sample_rate, cluster_ids=cluster_ids,
-            bin_size=bin_size, window_size=window_size)
+            st,
+            sc,
+            sample_rate=self.model.sample_rate,
+            cluster_ids=cluster_ids,
+            bin_size=bin_size,
+            window_size=window_size,
+        )
 
     def _get_correlograms_rate(self, cluster_ids, bin_size):
         """Return the baseline firing rate of the cross- and auto-correlograms of clusters."""
         spike_ids = self.selector(self.n_spikes_correlograms, cluster_ids)
         sc = self.supervisor.clustering.spike_clusters[spike_ids]
         return firing_rate(
-            sc, cluster_ids=cluster_ids, bin_size=bin_size, duration=self.model.duration)
+            sc, cluster_ids=cluster_ids, bin_size=bin_size, duration=self.model.duration
+        )
 
     def create_correlogram_view(self):
         """Create a correlogram view."""
@@ -1496,6 +1593,19 @@ class BaseController(object):
             firing_rate=self._get_correlograms_rate,
             sample_rate=self.model.sample_rate,
         )
+
+    def create_event_psth_view(self):
+        """Create an event PSTH view."""
+
+        def get_spike_times_for_cluster(cluster_id):
+            """Get spike times for a single cluster."""
+            try:
+                spike_ids = self.supervisor.clustering.spike_ids[cluster_id]
+                return self.model.spike_times[spike_ids]
+            except (KeyError, AttributeError, IndexError):
+                return np.array([])
+
+        return EventPsthView(get_spike_times=get_spike_times_for_cluster)
 
     # Probe view
     # -------------------------------------------------------------------------
@@ -1513,8 +1623,10 @@ class BaseController(object):
 
     def _make_histogram_view(self, view_cls, method):
         """Return a function that creates a HistogramView of a given class."""
+
         def _make():
             return view_cls(cluster_stat=method)
+
         return _make
 
     def _get_isi(self, cluster_id):
@@ -1534,6 +1646,7 @@ class BaseController(object):
 
     def _make_spike_attributes_view(self, view_name, name, arr):
         """Create a special class deriving from ScatterView for each spike attribute."""
+
         def coords(cluster_ids, load_all=False):
             n = self.n_spikes_amplitudes if not load_all else None
             bunchs = []
@@ -1553,6 +1666,7 @@ class BaseController(object):
 
         def _make():
             return view_cls(coords=coords)
+
         return _make
 
     # IPython View
@@ -1563,8 +1677,12 @@ class BaseController(object):
         view = IPythonView()
         view.start_kernel()
         view.inject(
-            controller=self, c=self, m=self.model, s=self.supervisor,
-            emit=emit, connect=connect,
+            controller=self,
+            c=self,
+            m=self.model,
+            s=self.supervisor,
+            emit=emit,
+            connect=connect,
         )
         return view
 
@@ -1577,6 +1695,7 @@ class BaseController(object):
         To be called before creating a GUI.
 
         """
+
         @connect(sender=self)
         def on_gui_ready(sender, gui):
             # Add a view automatically.
@@ -1584,18 +1703,21 @@ class BaseController(object):
                 gui.create_and_add_view(view_name)
 
     def create_misc_actions(self, gui):
-
         # Toggle spike reorder.
         @gui.view_actions.add(
-            shortcut=self.default_shortcuts['toggle_spike_reorder'],
-            checkable=True, checked=False)
+            shortcut=self.default_shortcuts["toggle_spike_reorder"],
+            checkable=True,
+            checked=False,
+        )
         def toggle_spike_reorder(checked):
             """Toggle spike time reordering."""
-            logger.debug("%s spike time reordering.", 'Enable' if checked else 'Disable')
-            emit('toggle_spike_reorder', self, checked)
+            logger.debug(
+                "%s spike time reordering.", "Enable" if checked else "Disable"
+            )
+            emit("toggle_spike_reorder", self, checked)
 
         # Action to switch the raw data filter inthe trace and waveform views.
-        @gui.view_actions.add(shortcut=self.default_shortcuts['switch_raw_data_filter'])
+        @gui.view_actions.add(shortcut=self.default_shortcuts["switch_raw_data_filter"])
         def switch_raw_data_filter():
             """Switch the raw data filter."""
             filter_name = self.raw_data_filter.next()
@@ -1608,7 +1730,9 @@ class BaseController(object):
             # Update the waveform view.
             for v in gui.list_views(WaveformView):
                 if v.auto_update:
-                    v.on_select_threaded(self.supervisor, self.supervisor.selected, gui=gui)
+                    v.on_select_threaded(
+                        self.supervisor, self.supervisor.selected, gui=gui
+                    )
                     v.ex_status = filter_name
                     v.update_status()
 
@@ -1617,34 +1741,41 @@ class BaseController(object):
     def _add_default_color_schemes(self, view):
         """Add the default color schemes to every view."""
         group_colors = {
-            'noise': 0,
-            'mua': 1,
-            'good': 2,
+            "noise": 0,
+            "mua": 1,
+            "good": 2,
             None: 3,
-            'unsorted': 3,
+            "unsorted": 3,
         }
         logger.debug("Adding default color schemes to %s.", view.name)
 
         def group_index(cluster_id):
-            group = self.supervisor.cluster_meta.get('group', cluster_id)
-            return group_colors.get(group, 0)  # TODO: better handling of colors for custom groups
+            group = self.supervisor.cluster_meta.get("group", cluster_id)
+            return group_colors.get(
+                group, 0
+            )  # TODO: better handling of colors for custom groups
 
-        depth = self.supervisor.cluster_metrics['depth']
-        fr = self.supervisor.cluster_metrics['fr']
+        depth = self.supervisor.cluster_metrics["depth"]
+        fr = self.supervisor.cluster_metrics["fr"]
         schemes = [
             # ('blank', 'blank', 0, False, False),
-            ('random', 'categorical', lambda cl: cl, True, False),
-            ('cluster_group', 'cluster_group', group_index, True, False),
-            ('depth', 'linear', depth, False, False),
-            ('firing_rate', 'linear', fr, False, True),
+            ("random", "categorical", lambda cl: cl, True, False),
+            ("cluster_group", "cluster_group", group_index, True, False),
+            ("depth", "linear", depth, False, False),
+            ("firing_rate", "linear", fr, False, True),
         ]
         for name, colormap, fun, categorical, logarithmic in schemes:
             view.add_color_scheme(
-                name=name, fun=fun, cluster_ids=self.supervisor.clustering.cluster_ids,
-                colormap=colormap, categorical=categorical, logarithmic=logarithmic)
+                name=name,
+                fun=fun,
+                cluster_ids=self.supervisor.clustering.cluster_ids,
+                colormap=colormap,
+                categorical=categorical,
+                logarithmic=logarithmic,
+            )
         # Default color scheme.
-        if not hasattr(view, 'color_scheme_name'):
-            view.color_schemes.set('random')
+        if not hasattr(view, "color_scheme_name"):
+            view.color_schemes.set("random")
 
     def create_gui(self, default_views=None, **kwargs):
         """Create the GUI.
@@ -1662,15 +1793,17 @@ class BaseController(object):
             name=self.gui_name,
             subtitle=str(self.dir_path),
             config_dir=self.config_dir,
-            local_path=self.cache_dir / 'state.json',
-            default_state_path=Path(inspect.getfile(self.__class__)).parent / 'static/state.json',
+            local_path=self.cache_dir / "state.json",
+            default_state_path=Path(inspect.getfile(self.__class__)).parent
+            / "static/state.json",
             view_creator=self.view_creator,
             default_views=default_views,
             enable_threading=self._enable_threading,
-            **kwargs)
+            **kwargs,
+        )
 
         # Set all state parameters from the GUI state.
-        state_params = _concatenate_parents_attributes(self.__class__, '_state_params')
+        state_params = _concatenate_parents_attributes(self.__class__, "_state_params")
         for param in state_params:
             setattr(self, param, gui.state.get(param, getattr(self, param, None)))
 
@@ -1690,8 +1823,13 @@ class BaseController(object):
             if isinstance(view, ManualClusteringView):
                 # Add auto update button.
                 view.dock.add_button(
-                    name='auto_update', icon='f021', checkable=True, checked=view.auto_update,
-                    event='toggle_auto_update', callback=view.toggle_auto_update)
+                    name="auto_update",
+                    icon="f021",
+                    checkable=True,
+                    checked=view.auto_update,
+                    event="toggle_auto_update",
+                    callback=view.toggle_auto_update,
+                )
 
                 # Show selected clusters when adding new views in the GUI.
                 view.on_select(cluster_ids=self.supervisor.selected_clusters)
@@ -1718,12 +1856,12 @@ class BaseController(object):
             unconnect(on_select_more, self)
             unconnect(on_request_select, self)
             # Show save prompt if an action was done.
-            do_prompt_save = kwargs.get('do_prompt_save', True)
+            do_prompt_save = kwargs.get("do_prompt_save", True)
             if do_prompt_save and self.supervisor.is_dirty():  # pragma: no cover
                 r = _prompt_save()
-                if r == 'save':
+                if r == "save":
                     self.supervisor.save()
-                elif r == 'cancel':
+                elif r == "cancel":
                     # Prevent closing of the GUI by returning False.
                     return False
                 # Otherwise (r is 'close') we do nothing and close as usual.
@@ -1731,17 +1869,16 @@ class BaseController(object):
         # Status bar handler
         handler = StatusBarHandler(gui)
         handler.setLevel(logging.INFO)
-        logging.getLogger('phy').addHandler(handler)
+        logging.getLogger("phy").addHandler(handler)
 
         # Save the memcache when closing the GUI.
         @connect(sender=gui)  # noqa
         def on_close(sender):  # noqa
-
             # Gather all GUI state attributes from views that are local and thus need
             # to be saved in the data directory.
             for view in gui.views:
-                local_keys = getattr(view, 'local_state_attrs', [])
-                local_keys = ['%s.%s' % (view.name, key) for key in local_keys]
+                local_keys = getattr(view, "local_state_attrs", [])
+                local_keys = ["%s.%s" % (view.name, key) for key in local_keys]
                 gui.state.add_local_keys(local_keys)
 
             # Update the controller params in the GUI state.
@@ -1749,14 +1886,14 @@ class BaseController(object):
                 gui.state[param] = getattr(self, param, None)
 
             # Save the memcache.
-            gui.state['GUI_VERSION'] = self.gui_version
+            gui.state["GUI_VERSION"] = self.gui_version
             self.context.save_memcache()
 
             # Remove the status bar handler when closing the GUI.
-            logging.getLogger('phy').removeHandler(handler)
+            logging.getLogger("phy").removeHandler(handler)
 
         try:
-            emit('gui_ready', self, gui)
+            emit("gui_ready", self, gui)
         except Exception as e:  # pragma: no cover
             logger.error(e)
 

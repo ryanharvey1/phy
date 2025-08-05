@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 # Raster view
 # -----------------------------------------------------------------------------
 
+
 class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusteringView):
     """This view shows a raster plot of all clusters.
 
@@ -40,15 +41,15 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
 
     """
 
-    _default_position = 'right'
+    _default_position = "right"
 
     default_shortcuts = {
-        'change_marker_size': 'alt+wheel',
-        'switch_color_scheme': 'shift+wheel',
-        'decrease_marker_size': 'ctrl+shift+-',
-        'increase_marker_size': 'ctrl+shift++',
-        'select_cluster': 'ctrl+click',
-        'select_more': 'shift+click',
+        "change_marker_size": "alt+wheel",
+        "switch_color_scheme": "shift+wheel",
+        "decrease_marker_size": "ctrl+shift+-",
+        "increase_marker_size": "ctrl+shift++",
+        "select_cluster": "ctrl+click",
+        "select_more": "shift+click",
     }
 
     def __init__(self, spike_times, spike_clusters, cluster_ids=None, **kwargs):
@@ -63,22 +64,27 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
 
         super(RasterView, self).__init__(**kwargs)
 
-        self.canvas.set_layout('stacked', origin='top', n_plots=self.n_clusters, has_clip=False)
+        self.canvas.set_layout(
+            "stacked", origin="top", n_plots=self.n_clusters, has_clip=False
+        )
         self.canvas.enable_axes()
 
         self.visual = ScatterVisual(
-            marker='vbar',
-            marker_scaling='''
+            marker="vbar",
+            marker_scaling="""
                 point_size = v_size * u_zoom.y + 5.;
                 float width = 0.2;
                 float height = 0.5;
                 vec2 marker_size = point_size * vec2(width, height);
                 marker_size.x = clamp(marker_size.x, 1, 20);
-            ''',
+            """,
         )
-        self.visual.inserter.insert_vert('''
+        self.visual.inserter.insert_vert(
+            """
                 gl_PointSize = a_size * u_zoom.y + 5.0;
-        ''', 'end')
+        """,
+            "end",
+        )
         self.canvas.add_visual(self.visual)
         self.canvas.panzoom.set_constrain_bounds((-1, -2, +1, +2))
 
@@ -119,11 +125,12 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
 
     def _get_color(self, box_index, selected_clusters=None):
         """Return, for every spike, its color, based on its box index."""
-        cluster_colors = self.get_cluster_colors(self.all_cluster_ids, alpha=.75)
+        cluster_colors = self.get_cluster_colors(self.all_cluster_ids, alpha=0.75)
         # Selected cluster colors.
         if selected_clusters is not None:
             cluster_colors = _add_selected_clusters_colors(
-                selected_clusters, self.all_cluster_ids, cluster_colors)
+                selected_clusters, self.all_cluster_ids, cluster_colors
+            )
         return cluster_colors[box_index, :]
 
     # Main methods
@@ -148,7 +155,7 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
 
     @property
     def status(self):
-        return 'Color scheme: %s' % self.color_scheme
+        return "Color scheme: %s" % self.color_scheme
 
     def plot(self, **kwargs):
         """Make the raster plot."""
@@ -163,8 +170,12 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
         self.data_bounds = self._get_data_bounds()
 
         self.visual.set_data(
-            x=x, y=y, color=color, size=self.marker_size,
-            data_bounds=(0, -1, self.duration, 1))
+            x=x,
+            y=y,
+            color=color,
+            size=self.marker_size,
+            data_bounds=(0, -1, self.duration, 1),
+        )
         self.visual.set_box_index(box_index)
         self.canvas.stacked.n_boxes = self.n_clusters
         self._update_axes()
@@ -188,8 +199,8 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
         if not interval:
             return
         t0, t1 = interval
-        w = .5 * (t1 - t0)  # half width
-        tm = .5 * (t0 + t1)
+        w = 0.5 * (t1 - t0)  # half width
+        tm = 0.5 * (t0 + t1)
         w = min(5, w)  # minimum 5s time range
         t0, t1 = tm - w, tm + w
         x0 = -1 + 2 * t0 / self.duration
@@ -202,14 +213,14 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
 
     def on_mouse_click(self, e):
         """Select a cluster by clicking in the raster plot."""
-        if 'Control' not in e.modifiers:
+        if "Control" not in e.modifiers:
             return
         b = e.button
         # Get mouse position in NDC.
         cluster_idx, _ = self.canvas.stacked.box_map(e.pos)
         cluster_id = self.all_cluster_ids[cluster_idx]
         logger.debug("Click on cluster %d with button %s.", cluster_id, b)
-        if 'Shift' in e.modifiers:
-            emit('select_more', self, [cluster_id])
+        if "Shift" in e.modifiers:
+            emit("select_more", self, [cluster_id])
         else:
-            emit('request_select', self, [cluster_id])
+            emit("request_select", self, [cluster_id])

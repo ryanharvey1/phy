@@ -2,9 +2,9 @@
 
 """Clustering utility functions."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
 
@@ -17,9 +17,10 @@ from phylib.utils import Bunch, _as_list, _is_list, emit, silent
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Utility functions
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _update_cluster_selection(clusters, up):
     clusters = list(clusters)
@@ -30,24 +31,25 @@ def _update_cluster_selection(clusters, up):
 
 
 def _join(clusters):
-    return '[{}]'.format(', '.join(map(str, clusters)))
+    return "[{}]".format(", ".join(map(str, clusters)))
 
 
 def create_cluster_meta(cluster_groups):
     """Return a ClusterMeta instance with cluster group support."""
     meta = ClusterMeta()
-    meta.add_field('group')
+    meta.add_field("group")
 
     cluster_groups = cluster_groups or {}
-    data = {c: {'group': v} for c, v in cluster_groups.items()}
+    data = {c: {"group": v} for c, v in cluster_groups.items()}
     meta.from_dict(data)
 
     return meta
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # UpdateInfo class
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class UpdateInfo(Bunch):
     """Object created every time the dataset is modified via a clustering or cluster metadata
@@ -79,9 +81,10 @@ class UpdateInfo(Bunch):
         when redoing the undone action.
 
     """
+
     def __init__(self, **kwargs):
         d = dict(
-            description='',
+            description="",
             history=None,
             spike_ids=[],
             added=[],
@@ -99,27 +102,27 @@ class UpdateInfo(Bunch):
 
     def __repr__(self):
         desc = self.description
-        h = ' ({})'.format(self.history) if self.history else ''
+        h = " ({})".format(self.history) if self.history else ""
         if not desc:
-            return '<UpdateInfo>'
-        elif desc in ('merge', 'assign'):
+            return "<UpdateInfo>"
+        elif desc in ("merge", "assign"):
             a, d = _join(self.added), _join(self.deleted)
-            return '<{desc}{h} {d} => {a}>'.format(
-                desc=desc, a=a, d=d, h=h)
-        elif desc.startswith('metadata'):
+            return "<{desc}{h} {d} => {a}>".format(desc=desc, a=a, d=d, h=h)
+        elif desc.startswith("metadata"):
             c = _join(self.metadata_changed)
             m = self.metadata_value
-            return '<{desc}{h} {c} => {m}>'.format(
-                desc=desc, c=c, m=m, h=h)
-        return '<UpdateInfo>'
+            return "<{desc}{h} {c} => {m}>".format(desc=desc, c=c, m=m, h=h)
+        return "<UpdateInfo>"
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # ClusterMetadataUpdater class
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class ClusterMeta(object):
     """Handle cluster metadata changes."""
+
     def __init__(self):
         self._fields = {}
         self._reset_data()
@@ -147,7 +150,7 @@ class ClusterMeta(object):
 
     def from_dict(self, dic):
         """Import data from a `{cluster_id: {field: value}}` dictionary."""
-        #self._reset_data()
+        # self._reset_data()
         # Do not raise events here.
         with silent():
             for cluster, vals in dic.items():
@@ -192,15 +195,16 @@ class ClusterMeta(object):
                 self._data[cluster] = {}
             self._data[cluster][field] = value
 
-        up = UpdateInfo(description='metadata_' + field,
-                        metadata_changed=clusters,
-                        metadata_value=value,
-                        )
-        undo_state = emit('request_undo_state', self, up)
+        up = UpdateInfo(
+            description="metadata_" + field,
+            metadata_changed=clusters,
+            metadata_value=value,
+        )
+        undo_state = emit("request_undo_state", self, up)
 
         if add_to_stack:
             self._undo_stack.add((clusters, field, value, up, undo_state))
-            emit('cluster', self, up)
+            emit("cluster", self, up)
 
         return up
 
@@ -273,10 +277,10 @@ class ClusterMeta(object):
 
         # Return the UpdateInfo instance of the undo action.
         up, undo_state = args[-2:]
-        up.history = 'undo'
+        up.history = "undo"
         up.undo_state = undo_state
 
-        emit('cluster', self, up)
+        emit("cluster", self, up)
         return up
 
     def redo(self):
@@ -295,9 +299,9 @@ class ClusterMeta(object):
         self.set(field, clusters, value, add_to_stack=False)
 
         # Return the UpdateInfo instance of the redo action.
-        up.history = 'redo'
+        up.history = "redo"
 
-        emit('cluster', self, up)
+        emit("cluster", self, up)
         return up
 
 
@@ -305,8 +309,10 @@ class ClusterMeta(object):
 # Property cycle
 # -----------------------------------------------------------------------------
 
+
 class RotatingProperty(object):
     """A key-value property of a view that can switch between several predefined values."""
+
     def __init__(self):
         self._choices = {}
         self._current = None

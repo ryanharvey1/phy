@@ -2,26 +2,31 @@
 
 """Test clustering."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from phylib.io.mock import artificial_spike_clusters
-from phylib.io.array import (_spikes_in_clusters,)
+from phylib.io.array import (
+    _spikes_in_clusters,
+)
 from phylib.utils import connect
-from ..clustering import (_extend_spikes,
-                          _concatenate_spike_clusters,
-                          _extend_assignment,
-                          Clustering)
+from ..clustering import (
+    _extend_spikes,
+    _concatenate_spike_clusters,
+    _extend_assignment,
+    Clustering,
+)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test assignments
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_extend_spikes_simple():
     spike_clusters = np.array([3, 5, 2, 9, 5, 5, 2])
@@ -62,10 +67,9 @@ def test_extend_spikes():
 
 
 def test_concatenate_spike_clusters():
-    spikes, clusters = _concatenate_spike_clusters(([1, 5, 4],
-                                                    [10, 50, 40]),
-                                                   ([2, 0, 3, 6],
-                                                    [20, 0, 30, 60]))
+    spikes, clusters = _concatenate_spike_clusters(
+        ([1, 5, 4], [10, 50, 40]), ([2, 0, 3, 6], [20, 0, 30, 60])
+    )
     ae(spikes, np.arange(7))
     ae(clusters, np.arange(0, 60 + 1, 10))
 
@@ -82,28 +86,31 @@ def test_extend_assignment():
     # This should not depend on the index chosen.
     for to in (123, 0, 1, 2, 3):
         clusters_rel = [123] * len(spike_ids)
-        new_spike_ids, new_cluster_ids = _extend_assignment(spike_ids,
-                                                            spike_clusters,
-                                                            clusters_rel,
-                                                            10,
-                                                            )
+        new_spike_ids, new_cluster_ids = _extend_assignment(
+            spike_ids,
+            spike_clusters,
+            clusters_rel,
+            10,
+        )
         ae(new_spike_ids, [0, 2, 6])
         ae(new_cluster_ids, [10, 10, 11])
 
     # Second case: we assign the spikes to different clusters.
     clusters_rel = [0, 1]
-    new_spike_ids, new_cluster_ids = _extend_assignment(spike_ids,
-                                                        spike_clusters,
-                                                        clusters_rel,
-                                                        10,
-                                                        )
+    new_spike_ids, new_cluster_ids = _extend_assignment(
+        spike_ids,
+        spike_clusters,
+        clusters_rel,
+        10,
+    )
     ae(new_spike_ids, [0, 2, 6])
     ae(new_cluster_ids, [10, 11, 12])
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test clustering
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_clustering_split():
     spike_clusters = np.array([2, 5, 3, 2, 7, 5, 2])
@@ -115,22 +122,24 @@ def test_clustering_split():
     assert clustering.n_spikes == n_spikes
     ae(clustering.spike_ids, np.arange(n_spikes))
 
-    splits = [[0],
-              [1],
-              [2],
-              [0, 1],
-              [0, 2],
-              [1, 2],
-              [0, 1, 2],
-              [3],
-              [4],
-              [3, 4],
-              [6],
-              [6, 5],
-              [0, 6],
-              [0, 3, 6],
-              [0, 2, 6],
-              np.arange(7)]
+    splits = [
+        [0],
+        [1],
+        [2],
+        [0, 1],
+        [0, 2],
+        [1, 2],
+        [0, 1, 2],
+        [3],
+        [4],
+        [3, 4],
+        [6],
+        [6, 5],
+        [0, 6],
+        [0, 3, 6],
+        [0, 2, 6],
+        np.arange(7),
+    ]
 
     # Test many splits.
     for to_split in splits:
@@ -237,7 +246,7 @@ def test_clustering_merge():
 
     @connect(sender=clustering)
     def on_request_undo_state(sender, up):
-        return 'hello'
+        return "hello"
 
     # Checkpoint 0.
     _checkpoint()
@@ -267,8 +276,8 @@ def test_clustering_merge():
     info = clustering.undo()
     assert info.added == [2, 3]
     assert info.deleted == [12]
-    assert info.history == 'undo'
-    assert info.undo_state == ['hello']
+    assert info.history == "undo"
+    assert info.undo_state == ["hello"]
     _assert_is_checkpoint(1)
     ae(clustering.spikes_per_cluster[11], np.sort(np.r_[spk0, spk1]))
 
@@ -277,7 +286,7 @@ def test_clustering_merge():
     _assert_spikes([12])
     assert info.added == [12]
     assert info.deleted == [2, 3]
-    assert info.history == 'redo'
+    assert info.history == "redo"
     assert info.undo_state is None
     _assert_is_checkpoint(2)
 
@@ -307,7 +316,7 @@ def test_clustering_merge():
     info = clustering.undo()
     assert info.added == [7, 8]
     assert info.deleted == [14]
-    assert info.history == 'undo'
+    assert info.history == "undo"
     _assert_is_checkpoint(3)
 
     # We merge again.
@@ -358,7 +367,7 @@ def test_clustering_assign():
 
     @connect(sender=clustering)
     def on_request_undo_state(sender, up):
-        return 'hello'
+        return "hello"
 
     # Checkpoint 0.
     _checkpoint()
@@ -377,21 +386,21 @@ def test_clustering_assign():
     # Checkpoint 1.
     info = clustering.split(my_spikes_1)
     _checkpoint()
-    assert info.description == 'assign'
+    assert info.description == "assign"
     assert 10 in info.added
     assert info.history is None
     _assert_is_checkpoint(1)
 
     # Checkpoint 2.
     info = clustering.split(my_spikes_2)
-    assert info.description == 'assign'
+    assert info.description == "assign"
     assert info.history is None
     _checkpoint()
     _assert_is_checkpoint(2)
 
     # Checkpoint 3.
     info = clustering.assign(my_spikes_3)
-    assert info.description == 'assign'
+    assert info.description == "assign"
     assert info.history is None
     assert info.undo_state is None
     _checkpoint()
@@ -399,15 +408,15 @@ def test_clustering_assign():
 
     # Undo checkpoint 3.
     info = clustering.undo()
-    assert info.description == 'assign'
-    assert info.history == 'undo'
-    assert info.undo_state == ['hello']
+    assert info.description == "assign"
+    assert info.history == "undo"
+    assert info.undo_state == ["hello"]
     _checkpoint()
     _assert_is_checkpoint(2)
 
     # Checkpoint 4.
     info = clustering.assign(my_spikes_4)
-    assert info.description == 'assign'
+    assert info.description == "assign"
     assert info.history is None
     _checkpoint(4)
     assert len(info.deleted) >= 2

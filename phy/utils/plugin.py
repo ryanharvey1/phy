@@ -7,9 +7,9 @@ Code from http://eli.thegreenplace.net/2012/08/07/fundamental-concepts-of-plugin
 """
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import importlib
 import logging
@@ -23,9 +23,10 @@ from .config import load_master_config
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # IPlugin interface
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class IPluginRegistry(type):
     """Regjster all plugin instances."""
@@ -33,7 +34,7 @@ class IPluginRegistry(type):
     plugins = []
 
     def __init__(cls, name, bases, attrs):
-        if name != 'IPlugin':
+        if name != "IPlugin":
             logger.debug("Register plugin `%s`.", _fullname(cls))
             if _fullname(cls) not in (_fullname(_) for _ in IPluginRegistry.plugins):
                 IPluginRegistry.plugins.append(cls)
@@ -45,6 +46,7 @@ class IPlugin(metaclass=IPluginRegistry):
     Plugin classes should just implement a method `attach_to_controller(self, controller)`.
 
     """
+
     pass
 
 
@@ -56,9 +58,10 @@ def get_plugin(name):
     raise ValueError("The plugin %s cannot be found." % name)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Plugins discovery
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _iter_plugin_files(dirs):
     """Iterate through all found plugin files."""
@@ -70,11 +73,13 @@ def _iter_plugin_files(dirs):
             subdir = Path(subdir)
             # Skip test folders.
             base = subdir.name
-            if 'test' in base or '__' in base or '.git' in str(subdir):  # pragma: no cover
+            if (
+                "test" in base or "__" in base or ".git" in str(subdir)
+            ):  # pragma: no cover
                 continue
             logger.debug("Scanning `%s`.", subdir)
             for filename in files:
-                if (filename.startswith('__') or not filename.endswith('.py')):
+                if filename.startswith("__") or not filename.endswith(".py"):
                     continue  # pragma: no cover
                 logger.debug("Found plugin module `%s`.", filename)
                 yield subdir / filename
@@ -99,7 +104,7 @@ def discover_plugins(dirs):
     # Scan all subdirectories recursively.
     for path in _iter_plugin_files(dirs):
         modname = path.stem
-        if modname in ('phy_config', 'phycontrib_loader'):
+        if modname in ("phy_config", "phycontrib_loader"):
             continue
         spec = importlib.util.spec_from_file_location(modname, path)
         if spec is not None:
@@ -135,10 +140,10 @@ def attach_plugins(controller, plugins=None, config_dir=None, dirs=None):
 
     plugins = plugins or []
     config = load_master_config(config_dir=config_dir)
-    name = getattr(controller, 'gui_name', None) or controller.__class__.__name__
+    name = getattr(controller, "gui_name", None) or controller.__class__.__name__
     c = config.get(name)
     # Discover plugin files in the plugin directories, as specified in the phy config file.
-    dirs = (dirs or []) + config.get('Plugins', {}).get('dirs', [])
+    dirs = (dirs or []) + config.get("Plugins", {}).get("dirs", [])
     discover_plugins(dirs)
     default_plugins = c.plugins if c else []
     if len(default_plugins):
@@ -156,6 +161,5 @@ def attach_plugins(controller, plugins=None, config_dir=None, dirs=None):
             attached.append(plugin)
             logger.debug("Attached plugin %s.", plugin)
         except Exception as e:  # pragma: no cover
-            logger.warning(
-                "An error occurred when attaching plugin %s: %s.", plugin, e)
+            logger.warning("An error occurred when attaching plugin %s: %s.", plugin, e)
     return attached

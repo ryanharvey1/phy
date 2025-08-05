@@ -12,9 +12,28 @@ from functools import partial
 import logging
 
 from .qt import (
-    QApplication, QWidget, QDockWidget, QHBoxLayout, QVBoxLayout, QPushButton, QLabel, QCheckBox,
-    QMenu, QToolBar, QStatusBar, QMainWindow, QMessageBox, Qt, QPoint, QSize, _load_font,
-    _wait, prompt, show_box, screenshot as make_screenshot)
+    QApplication,
+    QWidget,
+    QDockWidget,
+    QHBoxLayout,
+    QVBoxLayout,
+    QPushButton,
+    QLabel,
+    QCheckBox,
+    QMenu,
+    QToolBar,
+    QStatusBar,
+    QMainWindow,
+    QMessageBox,
+    Qt,
+    QPoint,
+    QSize,
+    _load_font,
+    _wait,
+    prompt,
+    show_box,
+    screenshot as make_screenshot,
+)
 from .state import GUIState, _gui_state_path, _get_default_state_path
 from .actions import Actions, Snippets
 from phylib.utils import emit, connect
@@ -26,17 +45,19 @@ logger = logging.getLogger(__name__)
 # GUI utils
 # -----------------------------------------------------------------------------
 
+
 def _try_get_matplotlib_canvas(view):
     """Get the Qt widget from a matplotlib figure."""
     try:
         from matplotlib.pyplot import Figure
         from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+
         if isinstance(view, Figure):
             view = FigureCanvasQTAgg(view)
         # Case where the view has a .figure property which is a matplotlib figure.
-        elif isinstance(getattr(view, 'figure', None), Figure):
+        elif isinstance(getattr(view, "figure", None), Figure):
             view = FigureCanvasQTAgg(view.figure)
-        elif isinstance(getattr(getattr(view, 'canvas', None), 'figure', None), Figure):
+        elif isinstance(getattr(getattr(view, "canvas", None), "figure", None), Figure):
             view = FigureCanvasQTAgg(view.canvas.figure)
     except ImportError as e:  # pragma: no cover
         logger.warning("Import error: %s", e)
@@ -46,9 +67,10 @@ def _try_get_matplotlib_canvas(view):
 def _try_get_opengl_canvas(view):
     """Convert from QOpenGLWindow to QOpenGLWidget."""
     from phy.plot.base import BaseCanvas
+
     if isinstance(view, BaseCanvas):
         return QWidget.createWindowContainer(view)
-    elif isinstance(getattr(view, 'canvas', None), BaseCanvas):
+    elif isinstance(getattr(view, "canvas", None), BaseCanvas):
         return QWidget.createWindowContainer(view.canvas)
     return view
 
@@ -61,7 +83,7 @@ def _widget_position(widget):  # pragma: no cover
 # Dock widget
 # -----------------------------------------------------------------------------
 
-DOCK_TITLE_STYLESHEET = '''
+DOCK_TITLE_STYLESHEET = """
     * {
         padding: 0;
         margin: 0;
@@ -95,10 +117,10 @@ DOCK_TITLE_STYLESHEET = '''
     QPushButton:checked {
         background: #6c717a;
     }
-'''
+"""
 
 
-DOCK_STATUS_STYLESHEET = '''
+DOCK_STATUS_STYLESHEET = """
     * {
         padding: 0;
         margin: 0;
@@ -110,7 +132,7 @@ DOCK_STATUS_STYLESHEET = '''
     QLabel {
         padding: 3px;
     }
-'''
+"""
 
 
 class DockWidget(QDockWidget):
@@ -128,18 +150,25 @@ class DockWidget(QDockWidget):
     def __init__(self, *args, widget=None, **kwargs):
         super(DockWidget, self).__init__(*args, **kwargs)
         # Load the font awesome font.
-        self._font = _load_font('fa-solid-900.ttf')
+        self._font = _load_font("fa-solid-900.ttf")
         self._dock_widgets = {}
         self._widget = widget
 
     def closeEvent(self, e):
         """Qt slot when the window is closed."""
-        emit('close_dock_widget', self)
+        emit("close_dock_widget", self)
         super(DockWidget, self).closeEvent(e)
 
     def add_button(
-            self, callback=None, text=None, icon=None, checkable=False,
-            checked=False, event=None, name=None):
+        self,
+        callback=None,
+        text=None,
+        icon=None,
+        checkable=False,
+        checked=False,
+        event=None,
+        name=None,
+    ):
         """Add a button to the dock title bar, to the right.
 
         Parameters
@@ -166,10 +195,16 @@ class DockWidget(QDockWidget):
         """
         if callback is None:
             return partial(
-                self.add_button, text=text, icon=icon, name=name,
-                checkable=checkable, checked=checked, event=event)
+                self.add_button,
+                text=text,
+                icon=icon,
+                name=name,
+                checkable=checkable,
+                checked=checked,
+                event=event,
+            )
 
-        name = name or getattr(callback, '__name__', None) or text
+        name = name or getattr(callback, "__name__", None) or text
         assert name
         button = QPushButton(chr(int(icon, 16)) if icon else text)
         if self._font:
@@ -180,12 +215,14 @@ class DockWidget(QDockWidget):
         button.setToolTip(name)
 
         if callback:
+
             @button.clicked.connect
             def on_clicked(state):
                 return callback(state)
 
         # Change the state of the button when this event is called.
         if event:
+
             @connect(event=event, sender=self.view)
             def on_state_changed(sender, checked):
                 button.setChecked(checked)
@@ -215,7 +252,7 @@ class DockWidget(QDockWidget):
         if callback is None:
             return partial(self.add_checkbox, text=text, checked=checked, name=name)
 
-        name = name or getattr(callback, '__name__', None) or text
+        name = name or getattr(callback, "__name__", None) or text
         assert name
         checkbox = QCheckBox(text)
         checkbox.setLayoutDirection(2)
@@ -223,6 +260,7 @@ class DockWidget(QDockWidget):
         if checked:
             checkbox.setCheckState(Qt.Checked if checked else Qt.Unchecked)
         if callback:
+
             @checkbox.stateChanged.connect
             def on_state_changed(state):
                 return callback(state == Qt.Checked)
@@ -246,7 +284,7 @@ class DockWidget(QDockWidget):
         """Set the status text of the widget."""
         n = self.max_status_length
         if len(text) >= n:
-            text = text[:n // 2] + ' ... ' + text[-n // 2:]
+            text = text[: n // 2] + " ... " + text[-n // 2 :]
         self._status.setText(text)
 
     def _default_buttons(self):
@@ -255,27 +293,34 @@ class DockWidget(QDockWidget):
         # Only show the close button if the dock widget is closable.
         if int(self.features()) % 2 == 1:
             # Close button.
-            @self.add_button(name='close', text='✕')
+            @self.add_button(name="close", text="✕")
             def on_close(e):  # pragma: no cover
-                if not self.confirm_before_close_view or show_box(
-                    prompt(
-                        "Close %s?" % self.windowTitle(),
-                        buttons=['yes', 'no'], title='Close?')) == 'yes':
+                if (
+                    not self.confirm_before_close_view
+                    or show_box(
+                        prompt(
+                            "Close %s?" % self.windowTitle(),
+                            buttons=["yes", "no"],
+                            title="Close?",
+                        )
+                    )
+                    == "yes"
+                ):
                     self.close()
 
         # Screenshot button.
-        @self.add_button(name='screenshot', icon='f030')
+        @self.add_button(name="screenshot", icon="f030")
         def on_screenshot(e):  # pragma: no cover
-            if hasattr(self.view, 'screenshot'):
+            if hasattr(self.view, "screenshot"):
                 self.view.screenshot()
             else:
                 make_screenshot(self.view)
 
         # View menu button.
-        @self.add_button(name='view_menu', icon='f0c9')
+        @self.add_button(name="view_menu", icon="f0c9")
         def on_view_menu(e):  # pragma: no cover
             # Display the view menu.
-            button = self._dock_widgets['view_menu']
+            button = self._dock_widgets["view_menu"]
             x = _widget_position(button).x()
             y = _widget_position(self._widget).y()
             self._menu.exec(QPoint(x, y))
@@ -333,7 +378,7 @@ class DockWidget(QDockWidget):
         widget_layout.addWidget(self._widget, 100)
 
         # Widget status text.
-        self._status = QLabel('')
+        self._status = QLabel("")
         self._status.setMaximumHeight(30)
         self._status.setStyleSheet(DOCK_STATUS_STYLESHEET)
         widget_layout.addWidget(self._status, 1)
@@ -357,10 +402,10 @@ def _create_dock_widget(widget, name, closable=True, floatable=True):
 
     dock.setFeatures(options)
     dock.setAllowedAreas(
-        Qt.LeftDockWidgetArea |
-        Qt.RightDockWidgetArea |
-        Qt.TopDockWidgetArea |
-        Qt.BottomDockWidgetArea
+        Qt.LeftDockWidgetArea
+        | Qt.RightDockWidgetArea
+        | Qt.TopDockWidgetArea
+        | Qt.BottomDockWidgetArea
     )
 
     dock._create_menu()
@@ -371,11 +416,12 @@ def _create_dock_widget(widget, name, closable=True, floatable=True):
 
 
 def _get_dock_position(position):
-    return {'left': Qt.LeftDockWidgetArea,
-            'right': Qt.RightDockWidgetArea,
-            'top': Qt.TopDockWidgetArea,
-            'bottom': Qt.BottomDockWidgetArea,
-            }[position or 'right']
+    return {
+        "left": Qt.LeftDockWidgetArea,
+        "right": Qt.RightDockWidgetArea,
+        "top": Qt.TopDockWidgetArea,
+        "bottom": Qt.BottomDockWidgetArea,
+    }[position or "right"]
 
 
 def _prompt_save():  # pragma: no cover
@@ -386,7 +432,9 @@ def _prompt_save():  # pragma: no cover
     """
     b = prompt(
         "Do you want to save your changes before quitting?",
-        buttons=['save', 'cancel', 'close'], title='Save')
+        buttons=["save", "cancel", "close"],
+        title="Save",
+    )
     return show_box(b)
 
 
@@ -399,6 +447,7 @@ def _remove_duplicates(seq):
 # -----------------------------------------------------------------------------
 # GUI main window
 # -----------------------------------------------------------------------------
+
 
 class GUI(QMainWindow):
     """A Qt main window containing docking widgets. This class derives from `QMainWindow`.
@@ -437,18 +486,28 @@ class GUI(QMainWindow):
     """
 
     default_shortcuts = {
-        'enable_snippet_mode': ':',
-        'save': 'ctrl+s',
-        'about': '?',
-        'show_all_shortcuts': 'h',
-        'exit': 'ctrl+q',
+        "enable_snippet_mode": ":",
+        "save": "ctrl+s",
+        "about": "?",
+        "show_all_shortcuts": "h",
+        "exit": "ctrl+q",
     }
     default_snippets = {}
     has_save_action = True
 
     def __init__(
-            self, position=None, size=None, name=None, subtitle=None, view_creator=None,
-            view_count=None, default_views=None, config_dir=None, enable_threading=True, **kwargs):
+        self,
+        position=None,
+        size=None,
+        name=None,
+        subtitle=None,
+        view_creator=None,
+        view_count=None,
+        default_views=None,
+        config_dir=None,
+        enable_threading=True,
+        **kwargs,
+    ):
         # HACK to ensure that closeEvent is called only twice (seems like a
         # Qt bug).
         self._enable_threading = enable_threading
@@ -456,13 +515,12 @@ class GUI(QMainWindow):
         if not QApplication.instance():  # pragma: no cover
             raise RuntimeError("A Qt application must be created.")
         super(GUI, self).__init__()
-        self.setDockOptions(
-            QMainWindow.AllowTabbedDocks | QMainWindow.AllowNestedDocks)
+        self.setDockOptions(QMainWindow.AllowTabbedDocks | QMainWindow.AllowNestedDocks)
         self.setAnimated(False)
 
         logger.debug("Creating GUI.")
 
-        self._set_name(name, str(subtitle or ''))
+        self._set_name(name, str(subtitle or ""))
         position = position or (200, 200)
         size = size or (800, 600)
         self._set_pos_size(position, size)
@@ -476,28 +534,42 @@ class GUI(QMainWindow):
         # Mapping {name: menuBar}.
         self._menus = {}
         ds = self.default_shortcuts
-        self.file_actions = Actions(self, name='File', menu='&File', default_shortcuts=ds)
-        self.view_actions = Actions(self, name='View', menu='&View', default_shortcuts=ds)
-        self.help_actions = Actions(self, name='Help', menu='&Help', default_shortcuts=ds)
+        self.file_actions = Actions(
+            self, name="File", menu="&File", default_shortcuts=ds
+        )
+        self.view_actions = Actions(
+            self, name="View", menu="&View", default_shortcuts=ds
+        )
+        self.help_actions = Actions(
+            self, name="Help", menu="&Help", default_shortcuts=ds
+        )
 
         # Views,
         self._views = []
-        self._view_class_indices = defaultdict(int)  # Dictionary {view_name: next_usable_index}
+        self._view_class_indices = defaultdict(
+            int
+        )  # Dictionary {view_name: next_usable_index}
 
         # Create the GUI state.
         state_path = _gui_state_path(self.name, config_dir=config_dir)
-        default_state_path = kwargs.pop('default_state_path', _get_default_state_path(self))
-        self.state = GUIState(state_path, default_state_path=default_state_path, **kwargs)
+        default_state_path = kwargs.pop(
+            "default_state_path", _get_default_state_path(self)
+        )
+        self.state = GUIState(
+            state_path, default_state_path=default_state_path, **kwargs
+        )
 
         # View creator: dictionary {view_class: function_that_adds_view}
         self.default_views = default_views or ()
         self.view_creator = view_creator or {}
         # View count: take the requested one, or the GUI state one.
         self._requested_view_count = (
-            view_count if view_count is not None else self.state.get('view_count', {}))
+            view_count if view_count is not None else self.state.get("view_count", {})
+        )
         # If there is still no view count, use a default one.
         self._requested_view_count = self._requested_view_count or {
-            view_name: 1 for view_name in default_views or ()}
+            view_name: 1 for view_name in default_views or ()
+        }
 
         # Status bar.
         self._lock_status = False
@@ -505,8 +577,8 @@ class GUI(QMainWindow):
         self.setStatusBar(self._status_bar)
 
         # Toolbar.
-        self._toolbar = QToolBar('Toolbar', self)
-        self._toolbar.setObjectName('Toolbar')
+        self._toolbar = QToolBar("Toolbar", self)
+        self._toolbar.setObjectName("Toolbar")
         self._toolbar.setIconSize(QSize(24, 24))
         self._toolbar.hide()
         self.addToolBar(self._toolbar)
@@ -517,14 +589,14 @@ class GUI(QMainWindow):
         @connect(sender=self)
         def on_show(sender):
             logger.debug("Load the geometry state.")
-            gs = self.state.get('geometry_state', None)
+            gs = self.state.get("geometry_state", None)
             self.restore_geometry_state(gs)
 
     def _set_name(self, name, subtitle):
         """Set the GUI name."""
         if name is None:
             name = self.__class__.__name__
-        title = name if not subtitle else name + ' - ' + subtitle
+        title = name if not subtitle else name + " - " + subtitle
         self.setWindowTitle(title)
         self.setObjectName(name)
         # Set the name in the GUI.
@@ -542,9 +614,10 @@ class GUI(QMainWindow):
 
         # File menu.
         if self.has_save_action:
-            @self.file_actions.add(icon='f0c7', toolbar=True)
+
+            @self.file_actions.add(icon="f0c7", toolbar=True)
             def save():
-                emit('request_save', self)
+                emit("request_save", self)
 
         @self.file_actions.add
         def exit():
@@ -555,25 +628,28 @@ class GUI(QMainWindow):
         for view_name in sorted(self.view_creator.keys()):
             self.view_actions.add(
                 partial(self.create_and_add_view, view_name),
-                name='Add %s' % view_name,
+                name="Add %s" % view_name,
                 docstring="Add %s" % view_name,
-                show_shortcut=False)
+                show_shortcut=False,
+            )
         self.view_actions.separator()
 
         # Help menu.
-        @self.help_actions.add(shortcut=('HelpContents', 'h'))
+        @self.help_actions.add(shortcut=("HelpContents", "h"))
         def show_all_shortcuts():
             """Show the shortcuts of all actions."""
             for actions in self.actions:
                 actions.show_shortcuts()
 
-        @self.help_actions.add(shortcut='?')
+        @self.help_actions.add(shortcut="?")
         def about():  # pragma: no cover
             """Display an about dialog."""
             from phy import __version_git__
+
             msg = "phy {} v{}".format(self.name, __version_git__)
             try:
                 from phylib import __version__
+
                 msg += "\nphylib v{}".format(__version__)
             except ImportError:
                 pass
@@ -587,7 +663,7 @@ class GUI(QMainWindow):
         if self._closed:
             return
         _wait(250)
-        res = emit('close', self)
+        res = emit("close", self)
         # Discard the close event if False is returned by one of the callback
         # functions.
         if False in res:  # pragma: no cover
@@ -599,14 +675,14 @@ class GUI(QMainWindow):
         # Save the state to disk when closing the GUI.
         logger.debug("Save the geometry state.")
         gs = self.save_geometry_state()
-        self.state['geometry_state'] = gs
-        self.state['view_count'] = self.view_count
+        self.state["geometry_state"] = gs
+        self.state["view_count"] = self.view_count
         self.state.save()
 
     def show(self):
         """Show the window."""
         super(GUI, self).show()
-        emit('show', self)
+        emit("show", self)
 
     # Views
     # -------------------------------------------------------------------------
@@ -631,8 +707,10 @@ class GUI(QMainWindow):
         """Return the list of views which are instances of one or several classes."""
         s = set(classes)
         return [
-            view for view in self._views
-            if s.intersection({view.__class__, view.__class__.__name__})]
+            view
+            for view in self._views
+            if s.intersection({view.__class__, view.__class__.__name__})
+        ]
 
     def get_view(self, cls, index=0):
         """Return a view from a given class. If there are multiple views of the same class,
@@ -655,7 +733,7 @@ class GUI(QMainWindow):
             # index is the next usable index for the view's class.
             index = self._view_class_indices.get(cls, 0)
             assert index >= 1
-            name = '%s (%d)' % (basename, index)
+            name = "%s (%d)" % (basename, index)
         view.name = name
         return name
 
@@ -672,7 +750,7 @@ class GUI(QMainWindow):
             return
         # Attach the view to the GUI if it has an attach(gui) method,
         # otherwise add the view.
-        if hasattr(view, 'attach'):
+        if hasattr(view, "attach"):
             view.attach(self)
         else:
             self.add_view(view)
@@ -682,10 +760,17 @@ class GUI(QMainWindow):
         """Create and add as many views as specified in view_count."""
         self.view_actions.separator()
         # Keep the order of self.default_views.
-        view_names = [vn for vn in self.default_views if vn in self._requested_view_count]
+        view_names = [
+            vn for vn in self.default_views if vn in self._requested_view_count
+        ]
         # We add the views in the requested view count, but not in the default views.
-        view_names.extend([
-            vn for vn in self._requested_view_count.keys() if vn not in self.default_views])
+        view_names.extend(
+            [
+                vn
+                for vn in self._requested_view_count.keys()
+                if vn not in self.default_views
+            ]
+        )
         # Remove duplicates in view names.
         view_names = _remove_duplicates(view_names)
         # We add the view in the order they appear in the default views.
@@ -697,7 +782,9 @@ class GUI(QMainWindow):
             for i in range(n_views):
                 self.create_and_add_view(view_name)
 
-    def add_view(self, view, position=None, closable=True, floatable=True, floating=None):
+    def add_view(
+        self, view, position=None, closable=True, floatable=True, floating=None
+    ):
         """Add a dock widget to the main window.
 
         Parameters
@@ -736,7 +823,7 @@ class GUI(QMainWindow):
         @connect(sender=dock)
         def on_close_dock_widget(sender):
             self._views.remove(view)
-            emit('close_view', view, self)
+            emit("close_view", view, self)
 
         dock.show()
         logger.log(5, "Add %s to GUI.", name)
@@ -752,7 +839,9 @@ class GUI(QMainWindow):
             if not insert_before:
                 self.menuBar().addMenu(menu)
             else:
-                self.menuBar().insertMenu(self.get_menu(insert_before).menuAction(), menu)
+                self.menuBar().insertMenu(
+                    self.get_menu(insert_before).menuAction(), menu
+                )
             self._menus[name] = menu
         return self._menus[name]
 
@@ -808,8 +897,8 @@ class GUI(QMainWindow):
 
         """
         return {
-            'geometry': self.saveGeometry(),
-            'state': self.saveState(),
+            "geometry": self.saveGeometry(),
+            "state": self.saveState(),
         }
 
     def restore_geometry_state(self, gs):
@@ -822,7 +911,7 @@ class GUI(QMainWindow):
         """
         if not gs:
             return
-        if gs.get('geometry', None):
-            self.restoreGeometry((gs['geometry']))
-        if gs.get('state', None):
-            self.restoreState((gs['state']))
+        if gs.get("geometry", None):
+            self.restoreGeometry((gs["geometry"]))
+        if gs.get("state", None):
+            self.restoreState((gs["state"]))

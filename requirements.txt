@@ -20,3 +20,6 @@ PyQt5
 responses
 traitlets
 scikit-learn
+qtpy
+pygments
+IPython

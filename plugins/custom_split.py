@@ -6,6 +6,7 @@ from phy import IPlugin, connect
 def k_means(x):
     """Cluster an array into two subclusters, using the K-means algorithm."""
     from sklearn.cluster import KMeans
+
     return KMeans(n_clusters=2).fit_predict(x)
 
 
@@ -13,7 +14,7 @@ class ExampleCustomSplitPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
         def on_gui_ready(sender, gui):
-            @controller.supervisor.actions.add(shortcut='s')
+            @controller.supervisor.actions.add(shortcut="s")
             def custom_split():
                 """Split using the K-means clustering algorithm on the template amplitudes
                 of the first cluster."""
@@ -25,7 +26,9 @@ class ExampleCustomSplitPlugin(IPlugin):
                 # is using.
                 # Note that we need load_all=True to load all spikes from the selected clusters,
                 # instead of just the selection of them chosen for display.
-                bunchs = controller._amplitude_getter(cluster_ids, name='template', load_all=True)
+                bunchs = controller._amplitude_getter(
+                    cluster_ids, name="template", load_all=True
+                )
 
                 # We get the spike ids and the corresponding spike template amplitudes.
                 # NOTE: in this example, we only consider the first selected cluster.

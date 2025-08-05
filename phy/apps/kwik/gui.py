@@ -3,9 +3,9 @@
 """Kwik GUI."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 from pathlib import Path
@@ -32,14 +32,15 @@ except ImportError:  # pragma: no cover
     logger.debug("Package klusta not installed: the KwikGUI will not work.")
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Kwik GUI
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _backup(path):
     """Backup a file."""
     assert path.exists()
-    path_backup = str(path) + '.bak'
+    path_backup = str(path) + ".bak"
     if not Path(path_backup).exists():
         logger.info("Backup `%s`.", path_backup)
         shutil.copy(str(path), str(path_backup))
@@ -82,34 +83,36 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
 
     """
 
-    gui_name = 'KwikGUI'
+    gui_name = "KwikGUI"
 
     # Classes to load by default, in that order. The view refresh follows the same order
     # when the cluster selection changes.
     default_views = (
-        'CorrelogramView',
-        'ISIView',
-        'WaveformView',
-        'FeatureView',
-        'AmplitudeView',
-        'FiringRateView',
-        'TraceView',
+        "CorrelogramView",
+        "ISIView",
+        "WaveformView",
+        "FeatureView",
+        "AmplitudeView",
+        "FiringRateView",
+        "TraceView",
     )
 
     def __init__(self, kwik_path=None, **kwargs):
         assert kwik_path
         kwik_path = Path(kwik_path)
         dir_path = kwik_path.parent
-        self.channel_group = kwargs.get('channel_group', None)
-        self.clustering = kwargs.get('clustering', None)
-        super(KwikController, self).__init__(kwik_path=kwik_path, dir_path=dir_path, **kwargs)
+        self.channel_group = kwargs.get("channel_group", None)
+        self.clustering = kwargs.get("clustering", None)
+        super(KwikController, self).__init__(
+            kwik_path=kwik_path, dir_path=dir_path, **kwargs
+        )
 
     # Internal methods
     # -------------------------------------------------------------------------
 
     def _set_cache(self, clear_cache=None):
         """Set up the cache, clear it if required, and create the Context instance."""
-        self.cache_dir = self.dir_path / '.phy'
+        self.cache_dir = self.dir_path / ".phy"
         if self.channel_group is not None:
             self.cache_dir = self.cache_dir / str(self.channel_group)
         if clear_cache:
@@ -118,20 +121,24 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
         self.context = Context(self.cache_dir)
 
     def _create_model(self, **kwargs):
-        kwik_path = kwargs.get('kwik_path')
+        kwik_path = kwargs.get("kwik_path")
         _backup(kwik_path)
-        kwargs = {k: v for k, v in kwargs.items() if k in ('clustering', 'channel_group')}
+        kwargs = {
+            k: v for k, v in kwargs.items() if k in ("clustering", "channel_group")
+        }
         model = KwikModelGUI(str(kwik_path), **kwargs)
         # HACK: handle badly formed channel positions
         if model.channel_positions.ndim == 1:  # pragma: no cover
-            logger.warning("Unable to read the channel positions, generating mock ones.")
+            logger.warning(
+                "Unable to read the channel positions, generating mock ones."
+            )
             model.probe.positions = linear_positions(len(model.channel_positions))
         return model
 
     def _set_supervisor(self):
         """Create the Supervisor instance."""
         # Load the new cluster id.
-        new_cluster_id = self.context.load('new_cluster_id').get('new_cluster_id', None)
+        new_cluster_id = self.context.load("new_cluster_id").get("new_cluster_id", None)
 
         # Cluster groups.
         cluster_groups = self.model.cluster_groups
@@ -152,7 +159,7 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
 
         @connect(sender=supervisor)
         def on_attach_gui(sender):
-            @supervisor.actions.add(shortcut='shift+ctrl+k', set_busy=True)
+            @supervisor.actions.add(shortcut="shift+ctrl+k", set_busy=True)
             def recluster(cluster_ids=None):
                 """Relaunch KlustaKwik on the selected clusters."""
                 # Selected clusters.
@@ -203,8 +210,8 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
     def _get_mean_waveforms(self, cluster_id):
         b = self._get_waveforms(cluster_id).copy()
         b.data = np.mean(b.data, axis=0)[np.newaxis, ...]
-        b.masks = np.mean(b.masks, axis=0)[np.newaxis, ...] ** .1
-        b['alpha'] = 1.
+        b.masks = np.mean(b.masks, axis=0)[np.newaxis, ...] ** 0.1
+        b["alpha"] = 1.0
         return b
 
     # Public methods
@@ -214,7 +221,7 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
         """Get the best channels of a given cluster."""
         mm = self._get_mean_masks(cluster_id)
         channel_ids = np.argsort(mm)[::-1]
-        ind = mm[channel_ids] > .1
+        ind = mm[channel_ids] > 0.1
         if np.sum(ind) > 0:
             channel_ids = channel_ids[ind]
         else:  # pragma: no cover
@@ -233,16 +240,18 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
         self._save_cluster_info()
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Kwik commands
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def kwik_gui(path, channel_group=None, clustering=None, **kwargs):  # pragma: no cover
     """Launch the Kwik GUI."""
     assert path
     create_app()
     controller = KwikController(
-        path, channel_group=channel_group, clustering=clustering, **kwargs)
+        path, channel_group=channel_group, clustering=clustering, **kwargs
+    )
     gui = controller.create_gui()
     gui.show()
     run_app()
